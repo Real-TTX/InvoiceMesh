@@ -11,7 +11,7 @@
                 <dt>Notiz</dt><dd>@(r.Version.ChangeNote ?? "–")</dd>
                 <dt>Belege</dt><dd>@if (r.Documents > 0) { <span>@Ui.CountNoun(r.Documents, "Belege") mit dieser Version normalisiert</span> } else { <span>keine</span> }</dd>
             </dl>
-            <h3 class="mat-h4">Änderungen</h3>
+            <h3 class="im-subhead">Änderungen</h3>
             <ul class="im-evidence">@foreach (var c in r.Changes) { <li>@c</li> }</ul>
         </div>
     </section>

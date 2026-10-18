@@ -414,7 +414,7 @@ public sealed class BackupService(
             var restoredFiles = options.Files && manifest.Files.Count > 0 ? await RestoreFilesAsync(zip, manifest, notes, ct) : 0;
             if (options.Files && manifest.Scope == BackupScope.SystemOnly)
             {
-                notes.Add("Die Sicherung enthält keine Dateien (Umfang „nur System“). Anhänge, die nicht mehr im Speicher liegen, fehlen.");
+                notes.Add("Die Sicherung enthält keine Dateien (Umfang „nur System“). Originale und erzeugte Dateien, die nicht mehr im Speicher liegen, fehlen.");
             }
 
             var settings = options.Settings && manifest.HasSettings && RestoreSettings(zip, notes);

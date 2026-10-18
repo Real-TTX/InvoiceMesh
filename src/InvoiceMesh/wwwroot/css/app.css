@@ -142,3 +142,17 @@ tr.is-problem > td:first-child { box-shadow: inset 3px 0 0 var(--mat-danger); }
 @media print {
   .mat-nav, .mat-topbar, .mat-footer, .mat-btn-row, .im-offline, .mat-actions { display: none; }
 }
+
+/* ---- Restore: the bar above the files of a target, and the files ---- */
+.im-diff__bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--mat-space-3); }
+.im-comments { list-style: none; margin: 0; padding: 0; display: grid; }
+.im-comment__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mat-space-2); padding: var(--mat-space-2) 0; border-bottom: 1px solid var(--mat-border); }
+.im-comment:last-child .im-comment__head { border-bottom: 0; }
+
+/* ---- A heading inside a card, and a help text that opens ---- */
+.im-subhead { font-size: var(--mat-fs-md); font-weight: 600; margin: var(--mat-space-4) 0 var(--mat-space-2); }
+.im-subhead:first-child { margin-top: 0; }
+.im-details { margin-top: var(--mat-space-3); }
+.im-details > summary { cursor: pointer; color: var(--mat-accent-text); font-weight: 500; padding: var(--mat-space-2) 0; }
+.im-details > summary:focus-visible { outline: none; box-shadow: var(--mat-focus-ring); border-radius: var(--mat-radius-xs); }
+.im-col-actions { width: 1%; white-space: nowrap; text-align: end; }

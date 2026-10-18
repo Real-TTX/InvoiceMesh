@@ -57,7 +57,7 @@
                 <p>Du bearbeitest den <strong>Entwurf (Version @Model.Draft.Number)</strong>. <a href="/Mappings/Test?id=@Model.Id">In der Vorschau testen</a></p>
                 @if (Model.Changes.Count > 0)
                 {
-                    <h3 class="mat-h4">Änderungen gegenüber Version @Model.Active?.Number</h3>
+                    <h3 class="im-subhead">Änderungen gegenüber Version @Model.Active?.Number</h3>
                     <ul class="im-evidence">@foreach (var c in Model.Changes) { <li>@c</li> }</ul>
                 }
                 <form method="post" asp-page-handler="Activate" asp-route-id="@Model.Id" class="mat-form">

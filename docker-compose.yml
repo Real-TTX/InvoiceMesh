@@ -1,33 +1,41 @@
-# InvoiceMesh - release stack: the published image and a PostgreSQL.
-#   docker compose up -d
-# Web: http://localhost:2308 (the first visit creates the administrator)
+# InvoiceMesh - the published image and a PostgreSQL. Copy this file, then:
 #
-# Change the database password before the first start: put INVOICEMESH_DB_PASSWORD=<something long> into a file ".env" next to this one.
-# It is used by both services; after the first start it is stored in the database volume, so change it there too if you change it later.
+#   echo "INVOICEMESH_DB_PASSWORD=$(openssl rand -hex 24)" > .env    # once, before the first start
+#   docker compose up -d
+#
+# Web: http://localhost:2308 - the first visit creates the administrator (there is no default password).
+# Update: docker compose pull && docker compose up -d (the database migrates itself on start).
+#
+# The database password from ".env" is used by both services. PostgreSQL keeps it in its volume after the first start,
+# so changing it later means changing it in the database as well (ALTER USER postgres PASSWORD '...').
 name: invoicemesh
 
 services:
   invoicemesh:
-    image: ghcr.io/real-ttx/invoicemesh:latest   # :nightly for the newest state of the branch dev
+    image: ghcr.io/real-ttx/invoicemesh:latest   # :nightly = the newest state of the branch dev
+    container_name: invoicemesh
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "2308:2308"   # web interface (HTTP: put a reverse proxy with TLS in front)
+      - "2308:2308"   # plain HTTP: for anything beyond the local network put a reverse proxy with TLS in front
     environment:
       TZ: Europe/Berlin
       INVOICEMESH__Database__Password: ${INVOICEMESH_DB_PASSWORD:-invoicemesh}
-      # Behind a reverse proxy with HTTPS (the share links carry this address):
-      # INVOICEMESH__Server__PublicUrl: https://rechnungen.example.de
+      # Behind a reverse proxy with HTTPS - the share links carry this address, and the cookie is only sent over HTTPS:
+      # INVOICEMESH__Server__PublicUrl: https://invoices.example.com
       # INVOICEMESH__Server__ForceSecureCookie: "true"
     volumes:
       - invoicemesh-data:/data
-      # Backups to a NAS go over SMB from the app (Einstellungen > Backup > Ziele); a mounted folder works as well:
-      # - /mnt/nas/invoicemesh-backups:/backups
+      # Backups to a NAS: either over SMB from the app (Einstellungen > Backup > Ziele, nothing to mount),
+      # or a folder of the NAS mounted here and entered as "/backups" in a target of the kind "Ordner im Container oder Volume".
+      # The app runs as UID 1654, so that folder must be writable for it.
+      # - /volume1/backups/invoicemesh:/backups
 
   db:
     image: postgres:17
+    container_name: invoicemesh-db
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${INVOICEMESH_DB_PASSWORD:-invoicemesh}

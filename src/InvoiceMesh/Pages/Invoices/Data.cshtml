@@ -66,7 +66,7 @@ else
             <p class="mat-hint">Die Geschäftsbegriffe, wie sie ausgelesen wurden, und was nach Korrekturen gilt. Unsicher erkannte Werte sind markiert.</p>
             @foreach (var (part, rows) in Model.Header)
             {
-                <h3 class="mat-h4">@part</h3>
+                <h3 class="im-subhead">@part</h3>
                 <div class="mat-table-wrap">
                     <table class="mat-table">
                         <caption class="mat-sr-only">@part</caption>
@@ -79,7 +79,7 @@ else
             }
             @foreach (var (group, label, items) in Model.Groups)
             {
-                <h3 class="mat-h4">@label (@group)</h3>
+                <h3 class="im-subhead">@label (@group)</h3>
                 @for (var i = 0; i < items.Count; i++)
                 {
                     <div class="mat-table-wrap">

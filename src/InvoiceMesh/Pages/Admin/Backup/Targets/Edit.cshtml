@@ -22,7 +22,7 @@
             <im-select for="Input.Kind" label="Art" items="kinds" />
             <im-input for="Input.Host" label="Server" hint="Name oder Adresse des NAS, zum Beispiel nas.local (SMB, Port 445)" show-if="Input.Kind" show-value="Smb" />
             <im-input for="Input.Share" label="Freigabe" hint="Der Name des freigegebenen Ordners, zum Beispiel Sicherungen" show-if="Input.Kind" show-value="Smb" />
-            <im-input for="Input.Path" label="Ordner" full="true" hint="@("Bei einem NAS: ein Ordner in der Freigabe. Bei „Ordner“: ein Pfad, relativ zum Daten-Volume (leer: backups).")" />
+            <im-input for="Input.Path" label="Ordner" full="true" hint="@("Bei einem NAS: ein Ordner in der Freigabe. Bei „Ordner“: ein Pfad relativ zum Daten-Volume (leer: backups) oder ein eingehängter Ordner wie /backups.")" />
             <im-input for="Input.Domain" label="Domäne (optional)" autocomplete="off" show-if="Input.Kind" show-value="Smb" />
             <im-input for="Input.UserName" label="Benutzername" autocomplete="off" show-if="Input.Kind" show-value="Smb" />
             <im-input for="Input.Password" label="Passwort" type="password" autocomplete="new-password" show-if="Input.Kind" show-value="Smb" hint="@(Model.HasPassword ? "Leer lassen, um das gespeicherte Passwort zu behalten." : "Wird verschlüsselt gespeichert.")" />

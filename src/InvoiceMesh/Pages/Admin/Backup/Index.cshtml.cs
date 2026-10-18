@@ -33,7 +33,7 @@ public sealed class IndexModel(ImDbContext db, ConfigStore config, BackupService
 
     public async Task OnGetAsync()
     {
-        Head("Sicherung", "Datenbank, Einstellungen und Anhänge auf ein NAS oder in einen Ordner sichern.", ("Einstellungen", null), ("Sicherung", null));
+        Head("Sicherung", "Datenbank, Einstellungen und Belege auf ein NAS oder in einen Ordner sichern.", ("Einstellungen", null), ("Sicherung", null));
         Plans = await db.BackupPlan.AsNoTracking().Include(p => p.Target).OrderBy(p => p.Name).ToListAsync();
         TargetCount = await db.BackupTarget.CountAsync();
         LastRun = await db.BackupRun.AsNoTracking().OrderByDescending(r => r.StartDate).FirstOrDefaultAsync();

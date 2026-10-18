@@ -40,7 +40,7 @@ else if (Model.Manifest is { } m)
                 <div class="mat-field mat-field--full"><span class="mat-hint">Die Datenbank (Belege, Auslesungen, Korrekturen, Schemas, Mappings, Benutzer) wird immer ersetzt.</span></div>
                 @if (m.Files.Count > 0)
                 {
-                    <im-switch for="Input.Files" label="Dateien zurückspielen (Anhänge)" full="true" />
+                    <im-switch for="Input.Files" label="Dateien zurückspielen (Originale und erzeugte Dateien)" full="true" />
                 }
                 @if (m.HasSettings)
                 {

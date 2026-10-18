@@ -28,7 +28,7 @@
 <im-card title="Zweiter Faktor (Authenticator-App)" icon="shield">
     @if (Model.Enabled)
     {
-        <p><span class="im-chip im-chip--ok">Aktiv</span> Beim Anmelden fragen wir zusätzlich nach dem Code deiner App. Noch <strong>@Model.RemainingCodes</strong> Wiederherstellungscodes übrig.</p>
+        <p>@Ui.Pill("Aktiv", "ok", "check") Beim Anmelden fragen wir zusätzlich nach dem Code deiner App. Noch <strong>@Model.RemainingCodes</strong> Wiederherstellungscodes übrig.</p>
         <form class="mat-form" method="post" novalidate>
             <im-input name="Confirm" label="Zur Bestätigung: dein Passwort (oder ein Code)" type="password" autocomplete="current-password" required="true" />
             <div class="mat-btn-row">
@@ -76,7 +76,7 @@
                     @foreach (var s in Model.Sessions)
                     {
                         <tr>
-                            <td data-label="Gerät">@s.Device @if (s.IsThis) { <span class="im-chip im-chip--accent">dieses Gerät</span> }</td>
+                            <td data-label="Gerät">@s.Device @if (s.IsThis) { @Ui.Pill("dieses Gerät", "accent") }</td>
                             <td data-label="Adresse" class="mat-hide-sm mat-mono">@s.Ip</td>
                             <td data-label="Zuletzt aktiv">@Fmt.Moment(s.LastSeen)</td>
                             <td class="mat-table__cell-actions">

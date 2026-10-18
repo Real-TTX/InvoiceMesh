@@ -19,7 +19,7 @@
                 <im-card title="@group.Label" sub="@group.Id">
                     @for (var i = 0; i < items.Count; i++)
                     {
-                        <h3 class="mat-h4">@(i < items.Count - 1 ? $"{i + 1}. Eintrag" : "Neuer Eintrag (nur ausfüllen, wenn einer fehlt)")</h3>
+                        <h3 class="im-subhead">@(i < items.Count - 1 ? $"{i + 1}. Eintrag" : "Neuer Eintrag (nur ausfüllen, wenn einer fehlt)")</h3>
                         <div class="mat-form__grid">
                             @foreach (var input in items[i]) { <partial name="_CorrectInput" model="input" /> }
                         </div>
@@ -56,7 +56,7 @@
                         }
                         @for (var i = 0; i < items.Count; i++)
                         {
-                            if (group.Repeating) { <h3 class="mat-h4">@(i + 1). Eintrag</h3> }
+                            if (group.Repeating) { <h3 class="im-subhead">@(i + 1). Eintrag</h3> }
                             <div class="mat-form__grid">
                                 @foreach (var input in items[i]) { <partial name="_CorrectInput" model="input" /> }
                             </div>
