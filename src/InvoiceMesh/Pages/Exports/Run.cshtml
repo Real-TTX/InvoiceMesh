@@ -1,0 +1,15 @@
+@page
+@model InvoiceMesh.Pages.Exports.RunModel
+
+<form class="mat-form" method="post" asp-route-id="@Model.Id" novalidate>
+    <im-summary />
+    <im-card title="Welche Belege" icon="calendar">
+        <div class="mat-form__grid">
+            <im-input for="From" label="Eingegangen ab" type="date" />
+            <im-input for="To" label="Eingegangen bis" type="date" />
+            <im-switch for="OnlyValid" label="Ungültige Belege auslassen" />
+        </div>
+        <p class="mat-hint">Es gibt @Ui.CountNoun(Model.Available, "Belege") mit verarbeiteten Daten. Belege, die mit einer anderen Version des Schemas normalisiert wurden, werden für den Export mit der aktiven Version aufbereitet; gespeichert wird dabei nichts.</p>
+    </im-card>
+    <im-buttons save-text="Export herunterladen" save-icon="download" back-href="/Exports" />
+</form>

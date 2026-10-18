@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="InvoiceMesh">
+  <title>InvoiceMesh</title>
+  <!-- The tile in the blue of the app; a white page with a folded corner in baby blue; on the page a mesh of four nodes: many formats, one model. Flat, no gradient. -->
+  <rect width="64" height="64" rx="14" fill="#1a73c8"/>
+  <path d="M19.5 9h18.5l10 10v33.5a2.5 2.5 0 0 1-2.5 2.5h-26a2.5 2.5 0 0 1-2.5-2.5v-41A2.5 2.5 0 0 1 19.5 9z" fill="#ffffff"/>
+  <path d="M38 9v8a2 2 0 0 0 2 2h8z" fill="#9fd0ff"/>
+  <g stroke="#1a73c8" stroke-width="2.4" stroke-linecap="round" fill="none">
+    <line x1="25" y1="28" x2="40" y2="33"/>
+    <line x1="25" y1="28" x2="26" y2="45"/>
+    <line x1="40" y1="33" x2="26" y2="45"/>
+    <line x1="40" y1="33" x2="39" y2="46"/>
+    <line x1="26" y1="45" x2="39" y2="46"/>
+  </g>
+  <circle cx="25" cy="28" r="3.6" fill="#0d4f94"/>
+  <circle cx="40" cy="33" r="3.6" fill="#1a73c8"/>
+  <circle cx="26" cy="45" r="3.6" fill="#1a73c8"/>
+  <circle cx="39" cy="46" r="3.6" fill="#0d4f94"/>
+</svg>

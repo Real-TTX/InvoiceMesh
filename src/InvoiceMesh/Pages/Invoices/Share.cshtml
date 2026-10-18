@@ -1,0 +1,49 @@
+@page
+@model InvoiceMesh.Pages.Invoices.ShareModel
+
+@if (Model.Existing.Count > 0)
+{
+    <section class="mat-card" aria-labelledby="links-title">
+        <div class="mat-card__head">@Ui.Icon("link")<h2 class="mat-card__title" id="links-title">Links dieses Belegs</h2></div>
+        <div class="mat-card__body">
+            <ul class="im-notes">
+                @for (var i = 0; i < Model.Existing.Count; i++)
+                {
+                    var l = Model.Existing[i];
+                    var active = l.IsActive(Model.Now);
+                    <li class="im-note">
+                        @Ui.Icon(active ? "link" : "x-circle", active ? "im-note__icon im-note__icon--ok" : "im-note__icon")
+                        <div class="im-note__body">
+                            <a class="im-note__title" href="/Admin/Shares/Edit?id=@l.Id">@l.Title</a>
+                            <span class="im-note__meta">@(active ? "gültig bis " + Fmt.Date(l.ExpiresDate) : l.RevokedDate is not null ? "widerrufen" : "abgelaufen")@(l.PasswordHash is null ? "" : " · mit Passwort") · @l.ViewCount Aufrufe</span>
+                            @if (active)
+                            {
+                                <div class="mat-input-group">
+                                    <input class="mat-input mat-mono" id="link-@i" value="@Model.LinkOf(l)" readonly aria-label="Adresse des Links" />
+                                    <button type="button" class="mat-btn mat-btn--secondary" data-copy="#link-@i">@Ui.Icon("copy")<span>Kopieren</span></button>
+                                </div>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+}
+
+<form class="mat-form" method="post" asp-route-id="@Model.Id" novalidate>
+    <im-summary />
+    <im-card title="Neuer Link" icon="share">
+        <div class="mat-form__grid">
+            <im-input for="Input.Title" label="Titel" required="true" autocomplete="off" />
+            <im-input for="Input.RecipientName" label="Für (Name)" hint="Nur zur Erinnerung, wem du den Link gibst." autocomplete="off" />
+            <im-input for="Input.Days" label="Gültig (Tage)" type="number" min="1" max="365" step="1" />
+            <im-textarea for="Input.Message" label="Nachricht an den Empfänger" rows="3" full="true" />
+            <im-switch for="Input.AllowOriginal" label="Originaldatei zum Herunterladen anbieten" />
+            <im-switch for="Input.AllowGenerated" label="XRechnung, PDF-Ansicht und Prüfbericht anbieten" />
+            <im-switch for="Input.UsePassword" label="Mit Passwort schützen" />
+            <im-input for="Input.Password" label="Passwort" type="password" autocomplete="new-password" show-if="Input.UsePassword" show-value="true" hint="Mindestens 8 Zeichen. Gib es auf einem anderen Weg weiter als den Link." />
+        </div>
+    </im-card>
+    <im-buttons save-text="Link anlegen" save-icon="link" back-href="@($"/Invoices/Details?id={Model.Id}")" />
+</form>

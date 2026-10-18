@@ -1,0 +1,23 @@
+@page
+@model InvoiceMesh.Pages.Schemas.GroupModel
+
+<form class="mat-form" method="post" asp-route-id="@Model.Id" asp-route-group="@Model.Group" novalidate>
+    <im-summary />
+    <im-card title="Gruppe" icon="folder">
+        <div class="mat-form__grid">
+            <im-input for="Input.Label" label="Bezeichnung" required="true" autocomplete="off" />
+            <im-input for="Input.Key" label="Schlüssel" required="true" autocomplete="off" hint="Der Name der Gruppe in JSON und XML." />
+            <im-textarea for="Input.Description" label="Beschreibung" rows="2" full="true" />
+            <im-switch for="Input.Repeating" label="Wiederholte Gruppe (eine Liste, z. B. Positionen oder Steuern)" />
+        </div>
+        <p class="mat-hint">Eine wiederholte Gruppe wird im Mapping einer Liste der Quelle zugeordnet (z. B. den Positionen BG-25). In JSON ist sie eine Liste, in CSV auf Wunsch eine Zeile je Eintrag.</p>
+    </im-card>
+    @if (Model.IsNew)
+    {
+        <im-buttons back-href="@($"/Schemas/Edit?id={Model.Id}")" />
+    }
+    else
+    {
+        <im-buttons back-href="@($"/Schemas/Edit?id={Model.Id}")" delete-url="@Url.Page("/Schemas/Group", "Delete", new { id = Model.Id, group = Model.Group })" delete-confirm="Diese Gruppe mit allen Feldern aus dem Entwurf entfernen?" />
+    }
+</form>

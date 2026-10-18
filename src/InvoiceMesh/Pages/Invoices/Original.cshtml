@@ -1,0 +1,78 @@
+@page
+@model InvoiceMesh.Pages.Invoices.OriginalModel
+@{
+    var doc = Model.Doc;
+    var f = Model.Ctx.Format;
+}
+
+<partial name="_LinkTabs" model="Model.Tabs" />
+
+<div class="im-split">
+    <im-tabs id="original" label="Ansichten des Originals">
+        <im-tab id="file" title="Datei" icon="file">
+            @if (Model.IsPdf)
+            {
+                <iframe class="im-frame" src="/files/@doc.Id/original" title="Original: @doc.FileName"></iframe>
+            }
+            else if (Model.IsImage && !Model.IsTiff)
+            {
+                <img class="im-image" src="/files/@doc.Id/original" alt="Original: @doc.FileName" />
+            }
+            else if (Model.OriginalXml is not null)
+            {
+                <pre class="im-code" tabindex="0" aria-label="XML des Originals">@Model.OriginalXml</pre>
+            }
+            else
+            {
+                <div class="mat-empty mat-empty--framed">
+                    <span class="mat-empty__icon">@Ui.Icon("file")</span>
+                    <div class="mat-empty__title">Keine Vorschau</div>
+                    <p>@(Model.IsTiff ? "Browser zeigen TIFF-Bilder nicht an." : "Für diesen Dateityp gibt es keine Vorschau.") Lade die Datei herunter@(Model.Ctx.Files.Any(x => x.Kind == GeneratedKind.Pdf) ? " oder öffne die erzeugte PDF-Ansicht unter „Dateien“" : "").</p>
+                </div>
+            }
+        </im-tab>
+        @if (Model.EmbeddedXml is not null)
+        {
+            <im-tab id="embedded" title="Eingebettetes XML" icon="file-code">
+                <p class="mat-hint">Gefunden als Anhang „@f?.EmbeddedFileName“ im PDF. Es ist die Quelle der ausgelesenen Daten.</p>
+                <pre class="im-code" tabindex="0" aria-label="Eingebettetes XML">@Model.EmbeddedXml</pre>
+            </im-tab>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Ctx.Extraction?.Text) && Model.Ctx.Extraction.Method is "PdfText" or "Ocr")
+        {
+            <im-tab id="text" title="Erkannter Text" icon="type">
+                <p class="mat-hint">@(Model.Ctx.Extraction.Method == "Ocr" ? $"Texterkennung mit {Model.Ctx.Extraction.OcrEngine}, mittlere Konfidenz {Model.Ctx.Extraction.OcrConfidence:0} %." : "Die Textebene des PDFs, Zeile für Zeile.")</p>
+                <pre class="im-code im-code--wrap" tabindex="0" aria-label="Erkannter Text">@Model.Ctx.Extraction.Text</pre>
+            </im-tab>
+        }
+    </im-tabs>
+
+    <aside class="mat-card">
+        <div class="mat-card__head">@Ui.Icon("search")<h2 class="mat-card__title">Erkanntes Format</h2></div>
+        <div class="mat-card__body">
+            <dl class="mat-kv">
+                <dt>Datei</dt><dd class="im-break">@doc.FileName</dd>
+                <dt>Größe</dt><dd>@Fmt.FileSize(doc.SizeBytes)</dd>
+                <dt>Dateityp</dt><dd>@(f?.Kind.ToString() ?? doc.FileKind)@(f?.ImageFormat is { } img ? $" ({img})" : "")@(f?.PageCount is { } p ? $", {p} Seite(n)" : "")</dd>
+                <dt>Syntax</dt><dd>@(f?.SyntaxVersion ?? "–")</dd>
+                <dt>Standard</dt><dd>@(f?.Standard ?? "–")</dd>
+                <dt>Profil</dt><dd>@(f?.Profile ?? "–")</dd>
+                <dt>Version</dt><dd>@(f?.Version ?? "–")</dd>
+                @if (f?.SpecificationId is { } spec) { <dt>Spezifikation (BT-24)</dt><dd class="im-source">@spec</dd> }
+                @if (f?.BusinessProcess is { } process) { <dt>Prozess (BT-23)</dt><dd class="im-source">@process</dd> }
+                <dt>Ausgelesen per</dt><dd>@Labels.Method(doc.Method)</dd>
+                <dt>SHA-256</dt><dd class="im-source">@doc.Sha256</dd>
+            </dl>
+            @if (f is not null)
+            {
+                <h3 class="mat-h4">Warum</h3>
+                <ul class="im-evidence">
+                    @foreach (var e in f.Evidence) { <li>@e</li> }
+                </ul>
+            }
+            <div class="mat-btn-row">
+                <a class="mat-btn mat-btn--secondary" href="/files/@doc.Id/original?download=1">@Ui.Icon("download")<span>Original laden</span></a>
+            </div>
+        </div>
+    </aside>
+</div>

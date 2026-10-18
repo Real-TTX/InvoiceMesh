@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- The logo for a tab: the tile and the page, with three nodes (four would be noise at 16 px). -->
+  <rect width="32" height="32" rx="7" fill="#1a73c8"/>
+  <path d="M10 4.5h9l5 5v17a1.5 1.5 0 0 1-1.5 1.5h-12.5a1.5 1.5 0 0 1-1.5-1.5v-20.5a1.5 1.5 0 0 1 1.5-1.5z" fill="#ffffff"/>
+  <path d="M19 4.5v4a1 1 0 0 0 1 1h4z" fill="#9fd0ff"/>
+  <path d="M12.5 14.5l7 3-7 3.5z" stroke="#1a73c8" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+  <circle cx="12.5" cy="14.5" r="2.1" fill="#0d4f94"/>
+  <circle cx="19.5" cy="17.5" r="2.1" fill="#1a73c8"/>
+  <circle cx="12.5" cy="21" r="2.1" fill="#0d4f94"/>
+</svg>

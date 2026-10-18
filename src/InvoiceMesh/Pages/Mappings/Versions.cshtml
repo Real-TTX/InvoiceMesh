@@ -1,0 +1,22 @@
+@page
+@model InvoiceMesh.Pages.Mappings.VersionsModel
+
+@foreach (var r in Model.Rows)
+{
+    <section class="mat-card" aria-labelledby="v-@r.Version.Id">
+        <div class="mat-card__head">@Ui.Icon("history")<h2 class="mat-card__title" id="v-@r.Version.Id">Version @r.Version.Number</h2>@Labels.Pill(r.Version.State)</div>
+        <div class="mat-card__body">
+            <dl class="mat-kv">
+                <dt>Aktiviert</dt><dd>@(r.Version.ActivatedDate is { } a ? $"{Fmt.Moment(a)} von {r.Version.ActivatedBy}" : "noch nicht")</dd>
+                <dt>Notiz</dt><dd>@(r.Version.ChangeNote ?? "–")</dd>
+                <dt>Revisionen</dt><dd>@r.Revisions</dd>
+            </dl>
+            <h3 class="mat-h4">Änderungen</h3>
+            <ul class="im-evidence">@foreach (var c in r.Changes) { <li>@c</li> }</ul>
+        </div>
+    </section>
+}
+
+<div class="mat-btn-row">
+    <a class="mat-btn mat-btn--secondary" href="/Mappings/Edit?id=@Model.Id">@Ui.Icon("back")<span>Zurück</span></a>
+</div>

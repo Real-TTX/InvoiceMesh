@@ -1,0 +1,51 @@
+@page
+@model InvoiceMesh.Pages.Formats.IndexModel
+
+<div class="im-split im-split--half">
+    <section class="mat-card" aria-labelledby="kinds-title">
+        <div class="mat-card__head">@Ui.Icon("file")<h2 class="mat-card__title" id="kinds-title">Dateien</h2></div>
+        <div class="mat-card__body">
+            <dl class="mat-kv">
+                <dt>XML</dt><dd>UBL 2.x (Invoice, CreditNote), UN/CEFACT CII D16B, CII D13B (ZUGFeRD 1.0, als Rohdaten)</dd>
+                <dt>PDF mit Daten</dt><dd>ZUGFeRD, Factur-X, XRechnung als Anhang: die Daten kommen aus dem eingebetteten XML, PDF und XML bleiben beide erhalten</dd>
+                <dt>PDF</dt><dd>Die Textebene wird gelesen</dd>
+                <dt>Scan, PNG, JPEG, TIFF</dt><dd>Texterkennung: @(Model.OcrAvailable ? Model.OcrVersion : "auf diesem System nicht verfügbar")</dd>
+            </dl>
+        </div>
+    </section>
+    <section class="mat-card" aria-labelledby="how-title">
+        <div class="mat-card__head">@Ui.Icon("search")<h2 class="mat-card__title" id="how-title">So wird erkannt</h2></div>
+        <div class="mat-card__body">
+            <ol class="im-steps">
+                <li>Dateityp an den ersten Bytes (Signatur).</li>
+                <li>Syntax am Wurzelelement und seinem Namensraum.</li>
+                <li>Standard, Profil und Version an der Spezifikationskennung (BT-24) mit der Tabelle unten.</li>
+                <li>Bei PDFs: zuerst eingebettete Rechnungsdaten, dann die Textebene, dann Texterkennung.</li>
+            </ol>
+            @if (Model.IsAdmin)
+            {
+                <p class="mat-hint">Weitere nationale Formate und Versionen trägst du unter <a href="/Admin/Formats">Einstellungen &gt; Formate</a> ein, ohne Programmänderung.</p>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="mat-table-wrap">
+    <table class="mat-table">
+        <caption class="mat-sr-only">Bekannte Spezifikationen</caption>
+        <thead><tr><th scope="col">Standard und Profil</th><th scope="col">Version</th><th scope="col" class="mat-hide-sm">Syntax</th><th scope="col" class="mat-hide-sm">Geprüft nach</th><th scope="col" class="mat-num">Belege</th></tr></thead>
+        <tbody>
+            @foreach (var s in Model.All)
+            {
+                <tr>
+                    <td data-label="Standard">@Ui.NameWithSub($"{s.Standard} · {s.Profile}{(s.IsBuiltIn ? "" : " (eigener Eintrag)")}", null, s.Identifier + (s.IsPrefix ? " …" : ""))@if (s.Note is not null) { <small class="im-sub mat-muted">@s.Note</small> }</td>
+                    <td data-label="Version">@s.Version</td>
+                    <td data-label="Syntax" class="mat-hide-sm">@InvoiceMesh.Pages.Formats.IndexModel.Syntaxes(s.Syntaxes)</td>
+                    <td data-label="Geprüft nach" class="mat-hide-sm">@InvoiceMesh.Pages.Formats.IndexModel.Rules(s.Rules)</td>
+                    <td data-label="Belege" class="mat-num">@(Model.Seen.GetValueOrDefault(s.Standard) is var n && n > 0 ? n.ToString() : "–")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<p class="mat-hint">Die Spalte „Belege“ zählt je Standard, nicht je Profil.</p>

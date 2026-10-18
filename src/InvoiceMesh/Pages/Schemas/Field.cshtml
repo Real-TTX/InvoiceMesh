@@ -1,0 +1,25 @@
+@page
+@model InvoiceMesh.Pages.Schemas.FieldModel
+
+<form class="mat-form" method="post" asp-route-id="@Model.Id" asp-route-group="@Model.Group" asp-route-field="@Model.Field" novalidate>
+    <im-summary />
+    <im-card title="Feld" icon="type">
+        <div class="mat-form__grid">
+            <im-input for="Input.Label" label="Bezeichnung" required="true" autocomplete="off" hint="So heißt das Feld auf den Seiten und als Spaltenkopf (wenn der Export Bezeichnungen nutzt)." />
+            <im-input for="Input.Key" label="Schlüssel" required="true" autocomplete="off" hint="Der technische Name in JSON, CSV und XML. Eine Umbenennung wird in den Mappings mitgezogen." />
+            <im-select for="Input.Type" label="Datentyp" items="Model.Types" />
+            <im-input for="Input.DefaultValue" label="Standardwert" autocomplete="off" hint="Gilt, wenn keine Quelle einen Wert hat; er wird als Standardwert gekennzeichnet, nie als gefunden." />
+            <im-textarea for="Input.AllowedValues" label="Erlaubte Werte (einer je Zeile)" rows="4" show-if="Input.Type" show-value="Code" hint="Leer: jeder Code ist erlaubt." />
+            <im-textarea for="Input.Description" label="Beschreibung" rows="2" full="true" />
+            <im-switch for="Input.Required" label="Pflichtfeld: ohne Wert ist der Beleg ungültig" />
+        </div>
+    </im-card>
+    @if (Model.IsNew)
+    {
+        <im-buttons back-href="@($"/Schemas/Edit?id={Model.Id}")" />
+    }
+    else
+    {
+        <im-buttons back-href="@($"/Schemas/Edit?id={Model.Id}")" delete-url="@Url.Page("/Schemas/Field", "Delete", new { id = Model.Id, group = Model.Group, field = Model.Field })" delete-confirm="Dieses Feld aus dem Entwurf entfernen?" />
+    }
+</form>

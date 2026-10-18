@@ -1,0 +1,111 @@
+@page "/s/{token:guid}"
+@model InvoiceMesh.Pages.Share.IndexModel
+@using InvoiceMesh.Core.Semantics
+@{
+    Layout = "_Bare";
+}
+
+<div class="im-share">
+    <header class="im-share__bar">
+        <div class="im-share__brand">@Ui.Logo()<strong>InvoiceMesh</strong></div>
+    </header>
+
+    @if (Model.State == ShareState.Unknown)
+    {
+        <div class="mat-empty mat-empty--framed"><span class="mat-empty__icon">@Ui.Icon("lock")</span><div class="mat-empty__title">Diesen Link gibt es nicht</div><p>Prüfe, ob die Adresse vollständig ist.</p></div>
+    }
+    else if (Model.State != ShareState.Active)
+    {
+        <div class="mat-empty mat-empty--framed"><span class="mat-empty__icon">@Ui.Icon("lock")</span><div class="mat-empty__title">@(Model.State == ShareState.Revoked ? "Dieser Link ist widerrufen" : "Dieser Link ist abgelaufen")</div><p>Bitte frage den Absender nach einem neuen Link.</p></div>
+    }
+    else if (Model.NeedsPassword)
+    {
+        <div class="mat-auth__card">
+            <h1>Passwort</h1>
+            <p class="mat-muted">Für diesen Beleg brauchst du ein Passwort.</p>
+            <form class="mat-form" method="post" asp-page-handler="Password" asp-route-token="@Model.Token" novalidate>
+                <div class="mat-field @(ViewData.ModelState.ContainsKey("Password") ? "is-invalid" : "")">
+                    <label class="mat-label" for="share-password">Passwort</label>
+                    <input class="mat-input" type="password" id="share-password" name="Password" autocomplete="off" autofocus @(Model.Locked ? "disabled" : "") />
+                    <span class="mat-error" aria-live="polite">@(ViewData.ModelState["Password"]?.Errors.FirstOrDefault()?.ErrorMessage)</span>
+                </div>
+                <div class="mat-btn-row mat-btn-row--plain"><button type="submit" class="mat-btn mat-btn--primary mat-btn--block" disabled="@Model.Locked">@Ui.Icon("lock-open")<span>Öffnen</span></button></div>
+            </form>
+        </div>
+    }
+    else if (Model.Ctx is { } c)
+    {
+        var d = c.Corrected;
+        var cur = d.Get("BT-5");
+        <h1>@Model.Link.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Link.Message))
+        {
+            <div class="mat-alert mat-alert--info" role="note">@Ui.Icon("info")<div class="mat-alert__body im-prewrap">@Model.Link.Message</div></div>
+        }
+        <p class="mat-muted">Nur lesend. Der Link ist @Model.RemainingText gültig.</p>
+
+        <div class="im-split im-split--half">
+            <section class="mat-card" aria-labelledby="share-facts">
+                <div class="mat-card__head">@Ui.Icon("file-text")<h2 class="mat-card__title" id="share-facts">@InvoicePdf.TypeLabel(d.Get("BT-3")) @d.Get("BT-1")</h2></div>
+                <div class="mat-card__body">
+                    <dl class="mat-kv">
+                        <dt>Datum</dt><dd>@(d.Date("BT-2") is { } date ? Fmt.Date(date) : "–")</dd>
+                        <dt>Fällig</dt><dd>@(d.Date("BT-9") is { } due ? Fmt.Date(due) : "–")</dd>
+                        <dt>Lieferant</dt><dd>@(d.Get("BT-27") ?? "–")</dd>
+                        <dt>Empfänger</dt><dd>@(d.Get("BT-44") ?? "–")</dd>
+                        <dt>Netto</dt><dd>@Ui.Amount(d.Decimal("BT-109"), cur)</dd>
+                        <dt>Umsatzsteuer</dt><dd>@Ui.Amount(d.Decimal("BT-110"), cur)</dd>
+                        <dt>Gesamt</dt><dd><strong>@Ui.Amount(d.Decimal("BT-112"), cur)</strong></dd>
+                        <dt>Format</dt><dd>@c.Format?.Summary</dd>
+                    </dl>
+                </div>
+            </section>
+            <section class="mat-card" aria-labelledby="share-validation">
+                <div class="mat-card__head">@Ui.Icon("shield")<h2 class="mat-card__title" id="share-validation">Prüfung</h2>@if (c.Validation is { } v) { @Labels.Pill(v.Status) }</div>
+                <div class="mat-card__body">
+                    @if (c.Validation is { } val)
+                    {
+                        <p>@val.Errors Fehler, @val.Warnings Warnungen. XRechnung @(val.XRechnungReady ? "möglich" : "nicht möglich").</p>
+                    }
+                    <div class="mat-btn-row mat-btn-row--plain">
+                        @if (Model.Link.AllowOriginal)
+                        {
+                            <a class="mat-btn mat-btn--primary" href="/s/@Model.Token/file/original">@Ui.Icon("download")<span>Original</span></a>
+                        }
+                        @if (Model.Link.AllowGenerated)
+                        {
+                            <a class="mat-btn mat-btn--secondary" href="/s/@Model.Token/file/report">@Ui.Icon("file-text")<span>Prüfbericht</span></a>
+                            @foreach (var f in c.Files.Where(f => f.Kind != GeneratedKind.ValidationReportPdf).GroupBy(f => f.Kind).Select(g => g.First()))
+                            {
+                                <a class="mat-btn mat-btn--secondary" href="/s/@Model.Token/file/generated?fileId=@f.Id">@Ui.Icon("download")<span>@Labels.Of(f.Kind)</span></a>
+                            }
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="mat-card" aria-labelledby="share-lines">
+            <div class="mat-card__head">@Ui.Icon("list")<h2 class="mat-card__title" id="share-lines">Positionen</h2></div>
+            <div class="mat-card__body">
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">Positionen</caption>
+                        <thead><tr><th scope="col">Bezeichnung</th><th scope="col" class="mat-num">Menge</th><th scope="col" class="mat-num mat-hide-sm">Einzelpreis</th><th scope="col" class="mat-num">Netto</th></tr></thead>
+                        <tbody>
+                            @foreach (var l in d.Items(SemanticCatalog.Lines))
+                            {
+                                <tr>
+                                    <td data-label="Bezeichnung">@l.Get("BT-153")</td>
+                                    <td data-label="Menge" class="mat-num">@l.Get("BT-129") @l.Get("BT-130")</td>
+                                    <td data-label="Einzelpreis" class="mat-num mat-hide-sm">@Ui.Amount(l.Decimal("BT-146"), cur)</td>
+                                    <td data-label="Netto" class="mat-num">@Ui.Amount(l.Decimal("BT-131"), cur)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    }
+</div>

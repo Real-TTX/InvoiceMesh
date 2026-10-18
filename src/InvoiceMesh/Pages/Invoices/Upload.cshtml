@@ -1,0 +1,36 @@
+@page
+@model InvoiceMesh.Pages.Invoices.UploadModel
+
+<div class="im-split">
+    <form class="mat-form im-dropform" method="post" enctype="multipart/form-data" novalidate>
+        <im-summary />
+        <im-card title="Dateien" icon="upload">
+            <div class="mat-field">
+                <label class="mat-label" for="files">Rechnungen <span class="mat-req" aria-hidden="true">*</span></label>
+                <div class="mat-upload im-drop" data-upload data-paste data-max-files="@UploadModel.MaxFiles" data-max-size="@(Model.MaxMb)MB">
+                    <input class="mat-upload__input" type="file" id="files" name="Files" multiple required data-msg-required="Bitte wähle mindestens eine Datei."
+                           accept=".pdf,.xml,.png,.jpg,.jpeg,.tif,.tiff,application/pdf,application/xml,text/xml,image/png,image/jpeg,image/tiff" aria-describedby="files-hint" />
+                </div>
+                <span class="mat-hint" id="files-hint">Bis zu @UploadModel.MaxFiles Dateien je @Model.MaxMb MB. Die Originaldatei wird unverändert gespeichert.</span>
+            </div>
+        </im-card>
+        <im-buttons save-text="Hochladen" save-icon="upload" back-href="/Invoices" />
+    </form>
+
+    <aside class="mat-card">
+        <div class="mat-card__head">@Ui.Icon("info")<h2 class="mat-card__title">Was passiert</h2></div>
+        <div class="mat-card__body">
+            <ol class="im-steps">
+                <li>Dateityp, Syntax, Standard, Profil und Version werden am Inhalt erkannt, nicht an der Endung.</li>
+                <li>Strukturierte Daten (UBL, CII, das XML in ZUGFeRD/Factur-X) werden direkt gelesen; PDFs ohne Daten über ihren Text, Scans und Bilder per Texterkennung.</li>
+                <li>Die Daten werden über das passende Mapping in dein Zielschema überführt.</li>
+                <li>Pflichtfelder, Datentypen, Summen, Steuern und die Regeln des Standards werden geprüft.</li>
+                <li>Reichen die Angaben, entsteht eine XRechnung; ohne Original-PDF eine lesbare PDF-Ansicht.</li>
+            </ol>
+            <dl class="mat-kv">
+                <dt>Strukturiert</dt><dd>XRechnung (UBL, CII), Peppol BIS Billing 3.0, ZUGFeRD / Factur-X, EN 16931, UBL 2.x, CII</dd>
+                <dt>Dokumente</dt><dd>PDF, Scan-PDF, PNG, JPEG, TIFF</dd>
+            </dl>
+        </div>
+    </aside>
+</div>

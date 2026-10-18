@@ -1,0 +1,35 @@
+@page
+@model InvoiceMesh.Pages.Admin.Formats.EditModel
+
+<form class="mat-form" method="post" asp-route-index="@Model.Index" novalidate>
+    <im-summary />
+    <im-card title="Kennung" icon="file-code">
+        <div class="mat-form__grid">
+            <im-input for="Input.Identifier" label="Spezifikationskennung" required="true" full="true" autocomplete="off" hint="z. B. urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0" />
+            <im-switch for="Input.IsPrefix" label="Kennungen, die so beginnen (z. B. für alle Unterversionen)" />
+        </div>
+    </im-card>
+    <im-card title="Bedeutung" icon="tag">
+        <div class="mat-form__grid">
+            <im-input for="Input.Standard" label="Standard" required="true" autocomplete="off" />
+            <im-input for="Input.Profile" label="Profil" required="true" autocomplete="off" />
+            <im-input for="Input.Version" label="Version" required="true" autocomplete="off" />
+            <im-input for="Input.Note" label="Hinweis" autocomplete="off" />
+        </div>
+    </im-card>
+    <im-card title="Regeln" icon="shield">
+        <div class="mat-form__grid">
+            <im-switch for="Input.En16931" label="Geschäftsregeln von EN 16931" />
+            <im-switch for="Input.XRechnung" label="Regeln der XRechnung (BR-DE)" />
+            <im-switch for="Input.Peppol" label="Regeln von Peppol BIS Billing 3.0" />
+        </div>
+    </im-card>
+    @if (Model.Index is null)
+    {
+        <im-buttons back-href="/Admin/Formats" />
+    }
+    else
+    {
+        <im-buttons back-href="/Admin/Formats" delete-url="@Url.Page("/Admin/Formats/Edit", "Delete", new { index = Model.Index })" delete-confirm="Dieses Format entfernen?" />
+    }
+</form>

@@ -1,0 +1,172 @@
+@page
+@model InvoiceMesh.Pages.IndexModel
+@{
+    var maxDay = Math.Max(1, Model.Days.Max(d => d.Count));
+    var maxFormat = Math.Max(1, Model.Formats.Select(f => f.Count).DefaultIfEmpty(0).Max());
+    string Pct(int value, int max) => (value * 100.0 / max).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+@if (Model.Processing > 0)
+{
+    <div class="mat-alert mat-alert--info" role="status" data-poll-ids="@string.Join(",", Model.PendingIds)">
+        @Ui.Icon("refresh")
+        <div class="mat-alert__body"><strong>@Ui.CountNoun(Model.Processing, "Belege") in Verarbeitung.</strong> Die Seite aktualisiert sich, sobald sie fertig sind.</div>
+    </div>
+}
+
+<div class="im-stats">
+    @Ui.Kpi("Belege gesamt", Fmt.Integer(Model.Total), "alle Eingänge", "file-text", href: "/Invoices")
+    @Ui.Kpi("Erfolgreich verarbeitet", Fmt.Integer(Model.Good), Model.Total == 0 ? "noch nichts da" : Fmt.Percent(Model.Good / (decimal)Model.Total) + " der Belege", "check-circle", href: "/Invoices?validierung=gueltig")
+    @Ui.Kpi("Zu prüfen", Fmt.Integer(Model.Review), Model.Review == 0 ? "nichts offen" : "unsichere Werte oder Fehler", "eye", href: "/Invoices?status=pruefen", bad: Model.Review > 0)
+    @Ui.Kpi("Fehler", Fmt.Integer(Model.Failed + Model.Invalid), $"{Model.Failed} nicht lesbar, {Model.Invalid} ungültig", "x-circle", href: "/Invoices?status=fehler", bad: Model.Failed + Model.Invalid > 0)
+    @Ui.Kpi("XRechnungen", Fmt.Integer(Model.XRechnungen), "erzeugt und gegengeprüft", "file-code", href: "/Invoices?xrechnung=ja")
+</div>
+
+@if (Model.Total == 0)
+{
+    <div class="mat-empty mat-empty--framed mat-empty--first">
+        <span class="mat-empty__icon">@Ui.Icon("upload")</span>
+        <div class="mat-empty__title">Noch keine Belege</div>
+        <p>Lade Rechnungen hoch: XRechnung, ZUGFeRD, Factur-X, Peppol, UBL, CII, PDFs oder Scans. InvoiceMesh erkennt das Format, liest die Daten aus und prüft sie.</p>
+        <div class="mat-btn-row mat-btn-row--plain">
+            <a class="mat-btn mat-btn--primary" href="/Invoices/Upload">@Ui.Icon("upload")<span>Belege hochladen</span></a>
+            @if (Model.IsAdmin)
+            {
+                <a class="mat-btn mat-btn--secondary" href="/Admin/System">@Ui.Icon("sparkles")<span>Beispieldaten anlegen</span></a>
+            }
+        </div>
+    </div>
+}
+
+<div class="mat-grid mat-grid--2">
+    <section class="mat-card" aria-labelledby="days-title">
+        <div class="mat-card__head">@Ui.Icon("bar-chart")<h2 class="mat-card__title" id="days-title">Eingänge der letzten 14 Tage</h2></div>
+        <div class="mat-card__body">
+            <div class="im-bars" aria-hidden="true">
+                @foreach (var d in Model.Days)
+                {
+                    <div class="im-bars__col" data-tip="@Fmt.Date(d.Date): @Ui.CountNoun(d.Count, "Belege")">
+                        @if (d.Count > 0) { <span class="im-bars__value">@d.Count</span> }
+                        <span class="im-bars__bar @(d.Count == 0 ? "is-zero" : "")" data-bar="@Pct(d.Count, maxDay)"></span>
+                    </div>
+                }
+            </div>
+            <div class="im-bars__axis" aria-hidden="true">
+                @foreach (var d in Model.Days)
+                {
+                    <span>@d.Date.ToString("dd.MM.", Fmt.Culture)</span>
+                }
+            </div>
+            <table class="mat-sr-only">
+                <caption>Eingänge je Tag</caption>
+                <thead><tr><th scope="col">Tag</th><th scope="col">Belege</th></tr></thead>
+                <tbody>@foreach (var d in Model.Days) { <tr><td>@Fmt.Date(d.Date)</td><td>@d.Count</td></tr> }</tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="formats-title">
+        <div class="mat-card__head">@Ui.Icon("file-code")<h2 class="mat-card__title" id="formats-title">Formate der Eingänge</h2></div>
+        <div class="mat-card__body">
+            @if (Model.Formats.Count == 0)
+            {
+                <p class="mat-muted">Noch keine Belege.</p>
+            }
+            else
+            {
+                <ul class="im-hbars">
+                    @foreach (var f in Model.Formats)
+                    {
+                        <li class="im-hbars__row">
+                            <a class="im-hbars__label" href="/Invoices?format=@Uri.EscapeDataString(f.Code)">@f.Code</a>
+                            <span class="im-hbars__track" data-tip="@f.Code: @Ui.CountNoun(f.Count, "Belege")"><span class="im-hbars__bar" data-bar="@Pct(f.Count, maxFormat)"></span></span>
+                            <span class="im-hbars__value">@f.Count</span>
+                        </li>
+                    }
+                </ul>
+                <p class="mat-hint">UBL und CII sind strukturierte Rechnungen, „PDF+CII“ hybride (ZUGFeRD, Factur-X), „PDF“ und „Scan“ werden aus dem Text gelesen.</p>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="im-split">
+    <section class="mat-card" aria-labelledby="recent-title">
+        <div class="mat-card__head">@Ui.Icon("file-text")<h2 class="mat-card__title" id="recent-title">Letzte Belege</h2><a class="mat-card__sub" href="/Invoices">Alle anzeigen</a></div>
+        <div class="mat-card__body">
+            @if (Model.Recent.Count == 0)
+            {
+                <p class="mat-muted">Noch keine Belege.</p>
+            }
+            else
+            {
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">Die zuletzt eingegangenen Belege</caption>
+                        <thead><tr><th scope="col">Beleg</th><th scope="col" class="mat-hide-sm">Lieferant</th><th scope="col">Format</th><th scope="col" class="mat-num mat-hide-sm">Betrag</th><th scope="col">Status</th><th scope="col" class="mat-hide-sm">Eingang</th></tr></thead>
+                        <tbody>
+                            @foreach (var i in Model.Recent)
+                            {
+                                <tr>
+                                    <td data-label="Beleg">@Ui.NameWithSub(i.InvoiceNumber ?? i.FileName, $"/Invoices/Details?id={i.Id}", i.InvoiceNumber is null ? null : i.FileName)</td>
+                                    <td data-label="Lieferant" class="mat-hide-sm">@(i.SellerName ?? "–")</td>
+                                    <td data-label="Format">@Ui.Format(i.FormatCode)</td>
+                                    <td data-label="Betrag" class="mat-num mat-hide-sm">@Ui.Amount(i.GrossTotal, i.Currency)</td>
+                                    <td data-label="Status">@Labels.Pill(i)</td>
+                                    <td data-label="Eingang" class="mat-hide-sm">@Fmt.Moment(i.ReceivedDate)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </section>
+
+    <aside class="im-cards mat-grid">
+        <section class="mat-card" aria-labelledby="quick-title">
+            <div class="mat-card__head">@Ui.Icon("rocket")<h2 class="mat-card__title" id="quick-title">Schnellaktionen</h2></div>
+            <div class="mat-card__body">
+                <ul class="mat-itemlist mat-itemlist--lines-none">
+                    <li class="mat-item"><a class="mat-item__main" href="/Invoices/Upload"><span class="mat-item__lead">@Ui.Icon("upload")</span><span class="mat-item__body"><span class="mat-item__title">Belege hochladen</span><span class="mat-item__text">Dateien wählen oder ablegen</span></span></a></li>
+                    <li class="mat-item"><a class="mat-item__main" href="/Invoices?status=pruefen"><span class="mat-item__lead">@Ui.Icon("eye")</span><span class="mat-item__body"><span class="mat-item__title">Belege prüfen</span><span class="mat-item__text">@Ui.CountNoun(Model.Review, "Belege") warten</span></span></a></li>
+                    <li class="mat-item"><a class="mat-item__main" href="/Mappings"><span class="mat-item__lead">@Ui.Icon("shuffle")</span><span class="mat-item__body"><span class="mat-item__title">Mappings anpassen</span><span class="mat-item__text">Quellen, Regeln, Vorschau</span></span></a></li>
+                    <li class="mat-item"><a class="mat-item__main" href="/Exports"><span class="mat-item__lead">@Ui.Icon("download")</span><span class="mat-item__body"><span class="mat-item__title">Exportieren</span><span class="mat-item__text">JSON, CSV, XML</span></span></a></li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="mat-card" aria-labelledby="events-title">
+            <div class="mat-card__head">@Ui.Icon("activity")<h2 class="mat-card__title" id="events-title">Neueste Aktivitäten</h2></div>
+            <div class="mat-card__body">
+                @if (Model.Events.Count == 0)
+                {
+                    <p class="mat-muted">Noch nichts passiert.</p>
+                }
+                else
+                {
+                    <ul class="im-notes">
+                        @foreach (var (e, d) in Model.Events)
+                        {
+                            <li class="im-note">
+                                @Ui.Icon(IndexModel.Icon(e.Kind), $"im-note__icon im-note__icon--{IndexModel.Tone(e.Kind)}")
+                                <div class="im-note__body">
+                                    @if (d is not null)
+                                    {
+                                        <a class="im-note__title" href="/Invoices/Details?id=@d.Id">@e.Kind · @d.DisplayName</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="im-note__title">@e.Kind</span>
+                                    }
+                                    <span class="im-note__meta">@e.Message</span>
+                                </div>
+                                <span class="im-note__end">@Fmt.Ago(e.OccurredDate, Model.Now)</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </section>
+    </aside>
+</div>

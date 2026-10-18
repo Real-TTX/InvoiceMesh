@@ -1,0 +1,25 @@
+Brightside Design Ltd
+14 King Street
+London EC2V 8EA
+VAT Reg No: GB123456789
+
+INVOICE
+
+Invoice No: BD-3391
+Invoice Date: 9 October 2026
+Due Date: 8 November 2026
+
+Bill To:
+Alpine Trading AG
+Bahnhofstrasse 10
+8001 Zürich
+
+Description                     Qty     Unit Price     Amount
+Logo design                     1       1,200.00       1,200.00
+Brand guidelines                1       800.00         800.00
+
+Subtotal                                               2,000.00 GBP
+VAT 0%                                                 0.00 GBP
+Total Due                                              2,000.00 GBP
+
+Payment terms: 30 days

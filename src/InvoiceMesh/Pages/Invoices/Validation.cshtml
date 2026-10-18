@@ -1,0 +1,122 @@
+@page
+@model InvoiceMesh.Pages.Invoices.ValidationModel
+@using InvoiceMesh.Core.Validation
+@{
+    var report = Model.Ctx.ValidationReport;
+    var v = Model.Ctx.Validation;
+}
+
+<partial name="_LinkTabs" model="Model.Tabs" />
+
+@if (report is null || v is null)
+{
+    <div class="mat-empty mat-empty--framed">
+        <span class="mat-empty__icon">@Ui.Icon("shield")</span>
+        <div class="mat-empty__title">Noch nicht validiert</div>
+        <p>Der Beleg wurde noch nicht geprüft.</p>
+    </div>
+}
+else
+{
+    <div class="im-stats">
+        @Ui.Kpi("Ergebnis", Labels.Of(v.Status), $"geprüft {Fmt.Moment(v.CreateDate)}", v.Status == ValidationStatus.Invalid ? "x-circle" : v.Status == ValidationStatus.Warnings ? "alert" : "check-circle", bad: v.Status == ValidationStatus.Invalid)
+        @Ui.Kpi("Fehler", v.Errors.ToString(), "verletzen eine Regel", "x-circle", href: $"/Invoices/Validation?id={Model.Id}&stufe=fehler", bad: v.Errors > 0)
+        @Ui.Kpi("Warnungen", v.Warnings.ToString(), "sollten geprüft werden", "alert", href: $"/Invoices/Validation?id={Model.Id}&stufe=warnungen")
+        @Ui.Kpi("XRechnung", v.XRechnungReady ? "möglich" : "nicht möglich", v.XRechnungReady ? "alle Pflichtangaben da" : Ui.CountNoun(Model.Ctx.XRechnungMissing.Count, "Befunde"), "file-code", href: "#xrechnung")
+    </div>
+
+    <div class="im-split">
+        <section class="mat-card" aria-labelledby="findings-title">
+            <div class="mat-card__head">@Ui.Icon("list")<h2 class="mat-card__title" id="findings-title">Befunde</h2></div>
+            <div class="mat-card__body">
+                <nav class="mat-tabs mat-tabs--pills" aria-label="Befunde filtern">
+                    @foreach (var (key, label) in new (string?, string)[] { (null, "Alle"), ("fehler", "Fehler"), ("warnungen", "Warnungen"), ("hinweise", "Hinweise") })
+                    {
+                        var active = key == Model.SeverityFilter;
+                        <a class="mat-tab @(active ? "is-active" : "")" href="/Invoices/Validation?id=@Model.Id@(key is null ? "" : "&stufe=" + key)" aria-current="@(active ? "page" : null)">@label</a>
+                    }
+                </nav>
+                @if (Model.Findings.Count == 0)
+                {
+                    <div class="mat-empty">
+                        <span class="mat-empty__icon">@Ui.Icon("check-circle")</span>
+                        <div class="mat-empty__title">Keine Befunde</div>
+                        <p>In dieser Auswahl gibt es nichts zu beanstanden.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="mat-table-wrap">
+                        <table class="mat-table">
+                            <caption class="mat-sr-only">Befunde der Validierung</caption>
+                            <thead><tr><th scope="col">Stufe</th><th scope="col">Regel</th><th scope="col">Befund</th><th scope="col" class="mat-hide-sm">Bereich</th></tr></thead>
+                            <tbody>
+                                @foreach (var f in Model.Findings)
+                                {
+                                    <tr>
+                                        <td data-label="Stufe">@Labels.Pill(f.Severity)</td>
+                                        <td data-label="Regel"><span class="im-source">@f.RuleId</span></td>
+                                        <td data-label="Befund">@f.Message@if (f.Location is not null) { <small class="im-sub im-source">@f.Location@(f.Value is null ? "" : " = " + f.Value)</small> }</td>
+                                        <td data-label="Bereich" class="mat-hide-sm">@ValidationReport.ScopeLabel(f.Scope)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <aside class="mat-grid">
+            <section class="mat-card" aria-labelledby="checks-title">
+                <div class="mat-card__head">@Ui.Icon("check-square")<h2 class="mat-card__title" id="checks-title">Durchgeführte Prüfungen</h2></div>
+                <div class="mat-card__body">
+                    <ul class="im-steps-list">
+                        @foreach (var c in report.Checks)
+                        {
+                            var count = report.Findings.Count(f => f.Scope == c.Scope && f.Severity == Severity.Error);
+                            <li class="im-step @(!c.Performed ? "" : count > 0 ? "is-error" : "is-ok")">
+                                @Ui.Icon(!c.Performed ? "minus" : count > 0 ? "x-circle" : "check-circle", "im-step__icon")
+                                <span>@ValidationReport.ScopeLabel(c.Scope)<small class="im-sub mat-muted">@c.Title@(c.Performed ? "" : " · nicht geprüft: " + c.Reason)</small></span>
+                                <span class="im-step__end">@(c.Performed ? $"{c.RuleCount} Regeln" : "–")</span>
+                            </li>
+                        }
+                    </ul>
+                    <p class="mat-hint">InvoiceMesh prüft die Regeln von EN 16931, XRechnung und Peppol BIS, die es kennt. Die verbindliche Prüfung einer XRechnung macht der Validator der KoSIT.</p>
+                </div>
+            </section>
+
+            <section class="mat-card" aria-labelledby="xrechnung">
+                <div class="mat-card__head">@Ui.Icon("file-code")<h2 class="mat-card__title" id="xrechnung">XRechnung</h2></div>
+                <div class="mat-card__body">
+                    @if (v.XRechnungReady)
+                    {
+                        <p>Alle Angaben, die eine XRechnung 3.0 verlangt, sind vorhanden und stimmen.</p>
+                    }
+                    else if (Model.Ctx.XRechnungMissing.Count == 0)
+                    {
+                        <p class="mat-muted">Der Beleg konnte nicht ausgelesen werden.</p>
+                    }
+                    else
+                    {
+                        <p>Eine XRechnung wird nur aus vollständigen Daten erzeugt; nichts wird ergänzt. Es fehlt oder widerspricht sich:</p>
+                        <ul class="im-notes">
+                            @foreach (var m in Model.Ctx.XRechnungMissing)
+                            {
+                                <li class="im-note">@Ui.Icon("minus", "im-note__icon")<div class="im-note__body"><span class="im-note__title">@m.RuleId</span><span class="im-note__meta">@m.Message</span></div></li>
+                            }
+                        </ul>
+                        <p class="mat-hint">Fehlende Angaben lassen sich als Korrektur ergänzen, wenn sie bekannt sind.</p>
+                    }
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <div class="mat-btn-row">
+        <a class="mat-btn mat-btn--primary" href="/files/@Model.Id/report.pdf">@Ui.Icon("download")<span>Bericht (PDF)</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/files/@Model.Id/report.json">@Ui.Icon("download")<span>Bericht (JSON)</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Invoices/Correct?id=@Model.Id">@Ui.Icon("edit")<span>Korrigieren</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Invoices/Details?id=@Model.Id">@Ui.Icon("back")<span>Zurück</span></a>
+    </div>
+}

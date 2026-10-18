@@ -1,0 +1,132 @@
+@page
+@model InvoiceMesh.Pages.Mappings.TestModel
+@using InvoiceMesh.Core.Mapping
+
+@if (Model.Tested is null)
+{
+    <div class="mat-empty mat-empty--framed">
+        <span class="mat-empty__icon">@Ui.Icon("flask")</span>
+        <div class="mat-empty__title">Nichts zu testen</div>
+        <p>Das Mapping hat weder einen Entwurf noch eine aktive Version.</p>
+    </div>
+}
+else
+{
+    <form method="get" class="mat-form">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <im-card title="Was getestet wird" icon="flask">
+            <div class="mat-form__grid">
+                <div class="mat-field">
+                    <label class="mat-label" for="version">Version</label>
+                    <select class="mat-select" id="version" name="version" data-submit-on-change>
+                        @if (Model.Draft is not null) { <option value="draft" selected="@(Model.Tested == Model.Draft)">Entwurf (Version @Model.Draft.Number)</option> }
+                        @if (Model.Active is not null) { <option value="active" selected="@(Model.Tested == Model.Active)">Aktiv (Version @Model.Active.Number)</option> }
+                    </select>
+                </div>
+                <div class="mat-field">
+                    <label class="mat-label" for="sample">Beispielbeleg</label>
+                    <select class="mat-select" id="sample" name="sample" data-submit-on-change>
+                        @foreach (var s in Model.Samples) { <option value="@s.Value" selected="@(s.Value == Model.Sample?.ToString())">@s.Text</option> }
+                    </select>
+                </div>
+            </div>
+            @if (Model.Compared)
+            {
+                <p class="mat-hint">Verglichen wird mit der aktiven Version @Model.Active?.Number: geänderte Werte sind markiert.</p>
+            }
+        </im-card>
+    </form>
+
+    @if (Model.Report is { } r && Model.SampleDoc is { } doc)
+    {
+        <div class="im-stats">
+            @Ui.Kpi("Zugeordnet", r.Count(FieldStatus.Mapped).ToString(), "aus einer Quelle", "check-circle")
+            @Ui.Kpi("Standardwerte", r.Count(FieldStatus.Default).ToString(), "keine Quelle hatte einen Wert", "info")
+            @Ui.Kpi("Konflikte", r.Count(FieldStatus.Conflict).ToString(), "Quellen uneinig", "alert", bad: r.Count(FieldStatus.Conflict) > 0)
+            @Ui.Kpi("Pflicht fehlt", r.MissingRequired.Count().ToString(), "ohne Wert", "x-circle", bad: r.MissingRequired.Any())
+            @Ui.Kpi("Ungültig", r.Count(FieldStatus.Invalid).ToString(), "passt nicht zum Typ", "x-circle", bad: r.Count(FieldStatus.Invalid) > 0)
+            @if (Model.Compared) { @Ui.Kpi("Geändert", Model.Lines.Count(l => l.Changed).ToString(), "gegenüber aktiv", "refresh") }
+        </div>
+
+        @if (r.DefinitionProblems.Count > 0)
+        {
+            <div class="mat-alert mat-alert--warning" role="note">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Probleme der Definition:</strong><ul class="mat-alert__list">@foreach (var p in r.DefinitionProblems) { <li>@p</li> }</ul></div></div>
+        }
+
+        <section class="mat-card" aria-labelledby="result-title">
+            <div class="mat-card__head">@Ui.Icon("columns")<h2 class="mat-card__title" id="result-title">Ergebnis für <a href="/Invoices/Data?id=@doc.Id">@doc.DisplayName</a></h2><span class="mat-card__sub">@doc.FormatSummary</span></div>
+            <div class="mat-card__body">
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">Ergebnis der Vorschau</caption>
+                        <thead><tr><th scope="col">Zielfeld</th><th scope="col">Wert</th>@if (Model.Compared) { <th scope="col" class="mat-hide-sm">Bisher (aktiv)</th> }<th scope="col">Status</th><th scope="col" class="mat-hide-sm">Quelle</th></tr></thead>
+                        <tbody>
+                            @foreach (var l in Model.Lines)
+                            {
+                                var f = l.Outcome;
+                                <tr class="@(f.Status == FieldStatus.Invalid || (f.Required && f.Value is null) ? "is-problem" : l.Changed ? "is-uncertain" : "")">
+                                    <td data-label="Zielfeld">@Ui.NameWithSub($"{f.GroupLabel} · {f.FieldLabel}{(f.Item is { } i ? $" ({i})" : "")}{(f.Required ? " *" : "")}", $"/Mappings/Rule?id={Model.Id}&target={f.Target}&sample={doc.Id}", f.Address)</td>
+                                    <td data-label="Wert"><span class="im-break">@(f.Value ?? "–")</span></td>
+                                    @if (Model.Compared) { <td data-label="Bisher" class="mat-hide-sm"><span class="im-break">@(l.ActiveValue ?? "–")</span></td> }
+                                    <td data-label="Status">@Labels.Pill(f.Status)@if (f.Message is not null) { <small class="im-sub mat-muted">@f.Message</small> }</td>
+                                    <td data-label="Quelle" class="mat-hide-sm"><span class="im-source">@f.Source@(f.Applied.Count > 0 ? " → " + string.Join(" → ", f.Applied) : "")</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        @if (r.Unused.Count > 0)
+        {
+            <section class="mat-card" aria-labelledby="unused-title">
+                <div class="mat-card__head">@Ui.Icon("filter")<h2 class="mat-card__title" id="unused-title">Nicht zugeordnete Quellfelder</h2><span class="mat-card__sub">@r.Unused.Count</span></div>
+                <div class="mat-card__body">
+                    <div class="im-chips">
+                        @foreach (var u in r.Unused) { <span class="im-chain__item" data-tip="@u.Label: @u.Value">@u.Reference</span> }
+                    </div>
+                </div>
+            </section>
+        }
+
+        <form method="post" asp-page-handler="Remember" asp-route-id="@Model.Id" asp-route-sample="@doc.Id" asp-route-version="@Model.Version">
+            <div class="mat-btn-row">
+                <a class="mat-btn mat-btn--primary" href="/Mappings/Edit?id=@Model.Id#version-title">@Ui.Icon("check")<span>Zum Aktivieren</span></a>
+                <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("star")<span>Als Beispiel merken</span></button>
+                <a class="mat-btn mat-btn--secondary" href="/Mappings/Edit?id=@Model.Id">@Ui.Icon("back")<span>Zurück</span></a>
+            </div>
+        </form>
+    }
+
+    <section class="mat-card" aria-labelledby="trial-title">
+        <div class="mat-card__head">@Ui.Icon("list")<h2 class="mat-card__title" id="trial-title">Probelauf</h2><span class="mat-card__sub">die letzten @TestModel.TrialSize Belege, zu denen das Mapping passt</span></div>
+        <div class="mat-card__body">
+            @if (Model.Trials.Count == 0)
+            {
+                <p class="mat-muted">Kein verarbeiteter Beleg passt zu „@DefinitionService.SelectorText(Model.Set)“.</p>
+            }
+            else
+            {
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">Probelauf</caption>
+                        <thead><tr><th scope="col">Beleg</th><th scope="col" class="mat-num">Pflicht fehlt</th><th scope="col" class="mat-num">Ungültig</th><th scope="col" class="mat-num mat-hide-sm">Konflikte</th>@if (Model.Compared) { <th scope="col" class="mat-num">Geändert</th> }</tr></thead>
+                        <tbody>
+                            @foreach (var t in Model.Trials)
+                            {
+                                <tr class="@(t.Missing + t.Invalid > 0 ? "is-problem" : "")">
+                                    <td data-label="Beleg">@Ui.NameWithSub(t.Doc.DisplayName, $"/Mappings/Test?id={Model.Id}&sample={t.Doc.Id}&version={Model.Version}", t.Doc.FormatSummary)</td>
+                                    <td data-label="Pflicht fehlt" class="mat-num">@t.Missing</td>
+                                    <td data-label="Ungültig" class="mat-num">@t.Invalid</td>
+                                    <td data-label="Konflikte" class="mat-num mat-hide-sm">@t.Conflicts</td>
+                                    @if (Model.Compared) { <td data-label="Geändert" class="mat-num">@t.Changed</td> }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </section>
+}

@@ -1,0 +1,45 @@
+# InvoiceMesh - release stack: the published image and a PostgreSQL.
+#   docker compose up -d
+# Web: http://localhost:2308 (the first visit creates the administrator)
+#
+# Change the database password before the first start: put INVOICEMESH_DB_PASSWORD=<something long> into a file ".env" next to this one.
+# It is used by both services; after the first start it is stored in the database volume, so change it there too if you change it later.
+name: invoicemesh
+
+services:
+  invoicemesh:
+    image: ghcr.io/real-ttx/invoicemesh:latest   # :nightly for the newest state of the branch dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "2308:2308"   # web interface (HTTP: put a reverse proxy with TLS in front)
+    environment:
+      TZ: Europe/Berlin
+      INVOICEMESH__Database__Password: ${INVOICEMESH_DB_PASSWORD:-invoicemesh}
+      # Behind a reverse proxy with HTTPS (the share links carry this address):
+      # INVOICEMESH__Server__PublicUrl: https://rechnungen.example.de
+      # INVOICEMESH__Server__ForceSecureCookie: "true"
+    volumes:
+      - invoicemesh-data:/data
+      # Backups to a NAS go over SMB from the app (Einstellungen > Backup > Ziele); a mounted folder works as well:
+      # - /mnt/nas/invoicemesh-backups:/backups
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${INVOICEMESH_DB_PASSWORD:-invoicemesh}
+      POSTGRES_DB: invoicemesh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d invoicemesh"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - invoicemesh-db:/var/lib/postgresql/data
+
+volumes:
+  invoicemesh-data:
+  invoicemesh-db:

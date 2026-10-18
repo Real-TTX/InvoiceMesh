@@ -1,0 +1,149 @@
+@page
+@model InvoiceMesh.Pages.Schemas.EditModel
+@using InvoiceMesh.Core.Schemas
+
+<form class="mat-form" method="post" novalidate>
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <im-summary />
+    <im-card title="Schema" icon="layers">
+        <div class="mat-form__grid">
+            <im-input for="Input.Name" label="Name" required="true" autocomplete="off" />
+            @if (Model.Schema is null)
+            {
+                <im-select for="Input.Template" label="Beginnen mit" items="Model.Templates" />
+            }
+            <im-textarea for="Input.Description" label="Beschreibung" rows="2" full="true" />
+            <im-switch for="Input.IsDefault" label="Standardschema: neue Belege werden in dieses Schema normalisiert" />
+        </div>
+    </im-card>
+    @if (Model.Schema is null)
+    {
+        <im-buttons save-text="Anlegen" back-href="/Schemas" />
+    }
+    else
+    {
+        <im-buttons back-href="/Schemas" delete-url="@Url.Page("/Schemas/Edit", "Delete", new { id = Model.Id })" delete-confirm="Dieses Schema löschen? Belege, die damit normalisiert wurden, behalten ihre Daten." />
+    }
+</form>
+
+@if (Model.Schema is not null)
+{
+    <section class="mat-card" aria-labelledby="version-title">
+        <div class="mat-card__head">@Ui.Icon("history")<h2 class="mat-card__title" id="version-title">Version</h2>@if (Model.Draft is not null) { @Labels.Pill(VersionState.Draft) } else if (Model.Active is not null) { @Labels.Pill(VersionState.Active) }</div>
+        <div class="mat-card__body">
+            @if (Model.Draft is null)
+            {
+                <p>Die Felder unten sind die aktive Version @Model.Active?.Number. Jede Änderung legt einen Entwurf an; die aktive Version bleibt in Kraft, bis du den Entwurf aktivierst.</p>
+            }
+            else
+            {
+                <p>Du bearbeitest den <strong>Entwurf (Version @Model.Draft.Number)</strong>. @(Model.Active is null ? "Es gibt noch keine aktive Version." : $"Aktiv ist Version {Model.Active.Number}.") Teste ihn mit einem Mapping in der Vorschau, bevor du ihn aktivierst.</p>
+                @if (Model.Changes.Count > 0)
+                {
+                    <h3 class="mat-h4">Änderungen gegenüber Version @Model.Active?.Number</h3>
+                    <ul class="im-evidence">@foreach (var c in Model.Changes) { <li>@c</li> }</ul>
+                }
+                var problems = Model.Definition?.Problems() ?? [];
+                @if (problems.Count > 0)
+                {
+                    <div class="mat-alert mat-alert--danger" role="alert">@Ui.Icon("x-circle")<div class="mat-alert__body"><strong>So kann der Entwurf nicht aktiviert werden:</strong><ul class="mat-alert__list">@foreach (var p in problems) { <li>@p</li> }</ul></div></div>
+                }
+                <form method="post" asp-page-handler="Activate" asp-route-id="@Model.Id" class="mat-form">
+                    <div class="mat-form__grid">
+                        <div class="mat-field mat-field--full">
+                            <label class="mat-label" for="note">Was ändert sich (für die Versionsgeschichte)</label>
+                            <input class="mat-input" id="note" name="note" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="mat-btn-row">
+                        <button type="submit" class="mat-btn mat-btn--primary" data-confirm="Den Entwurf als Version @Model.Draft.Number aktivieren? Neue Belege werden dann damit normalisiert." data-confirm-ok="Aktivieren">@Ui.Icon("check")<span>Entwurf aktivieren</span></button>
+                        <button type="submit" asp-page-handler="Discard" asp-route-id="@Model.Id" class="mat-btn mat-btn--secondary" formnovalidate data-confirm="Den Entwurf verwerfen? Die Änderungen gehen verloren." data-confirm-ok="Verwerfen">@Ui.Icon("x")<span>Entwurf verwerfen</span></button>
+                    </div>
+                </form>
+            }
+            @if (Model.OutdatedDocuments > 0)
+            {
+                <p class="mat-hint">@Ui.CountNoun(Model.OutdatedDocuments, "Belege") sind mit einer älteren Version normalisiert. <a href="/Invoices?schema=veraltet">Anzeigen und neu normalisieren</a></p>
+            }
+            @if (Model.Mappings.Count == 0)
+            {
+                <p class="mat-hint">Zu diesem Schema gibt es noch kein Mapping: ohne Mapping werden keine Daten hineingeschrieben. <a href="/Mappings/Edit?schema=@Model.Id">Mapping anlegen</a></p>
+            }
+            else
+            {
+                <p class="mat-hint">Mappings dieses Schemas: @foreach (var m in Model.Mappings) { <a href="/Mappings/Edit?id=@m.Id">@m.Name</a><text> </text> }</p>
+            }
+        </div>
+    </section>
+
+    @if (Model.Definition is { } def)
+    {
+        foreach (var (g, gi) in def.Groups.Select((g, i) => (g, i)))
+        {
+            <section class="mat-card" id="group-@g.Key" aria-labelledby="group-title-@g.Key">
+                <div class="mat-card__head">
+                    @Ui.Icon(g.Repeating ? "list" : "folder")
+                    <h2 class="mat-card__title" id="group-title-@g.Key">@g.Label</h2>
+                    <span class="mat-card__sub">@g.Key@(g.Repeating ? " · wiederholt (Liste)" : "")</span>
+                </div>
+                <div class="mat-card__body">
+                    @if (!string.IsNullOrWhiteSpace(g.Description)) { <p class="mat-muted">@g.Description</p> }
+                    @if (g.Fields.Count == 0)
+                    {
+                        <p class="mat-muted">Noch keine Felder.</p>
+                    }
+                    else
+                    {
+                        <div class="mat-table-wrap">
+                            <table class="mat-table">
+                                <caption class="mat-sr-only">Felder der Gruppe @g.Label</caption>
+                                <thead><tr><th scope="col">Feld</th><th scope="col">Typ</th><th scope="col" class="mat-hide-sm">Pflicht</th><th scope="col" class="mat-hide-sm">Standardwert</th><th scope="col"><span class="mat-sr-only">Aktionen</span></th></tr></thead>
+                                <tbody>
+                                    @foreach (var (f, fi) in g.Fields.Select((f, i) => (f, i)))
+                                    {
+                                        <tr>
+                                            <td data-label="Feld">@Ui.NameWithSub(f.Label, $"/Schemas/Field?id={Model.Id}&group={g.Key}&field={f.Key}", $"{g.Key}.{f.Key}")</td>
+                                            <td data-label="Typ">@FieldValues.TypeLabel(f.Type)@(f.AllowedValues.Count > 0 ? $" ({f.AllowedValues.Count} Werte)" : "")</td>
+                                            <td data-label="Pflicht" class="mat-hide-sm">@(f.Required ? "ja" : "–")</td>
+                                            <td data-label="Standardwert" class="mat-hide-sm">@(f.DefaultValue ?? "–")</td>
+                                            <td class="mat-table__cell-actions">
+                                                <form method="post" asp-page-handler="Move" asp-route-id="@Model.Id" asp-route-group="@g.Key" asp-route-field="@f.Key" class="mat-table__actions">
+                                                    <button type="submit" name="dir" value="-1" class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" aria-label="@f.Label nach oben" data-tip="Nach oben" disabled="@(fi == 0)">@Ui.Icon("arrow-up")</button>
+                                                    <button type="submit" name="dir" value="1" class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" aria-label="@f.Label nach unten" data-tip="Nach unten" disabled="@(fi == g.Fields.Count - 1)">@Ui.Icon("arrow-down")</button>
+                                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Schemas/Field?id=@Model.Id&group=@g.Key&field=@f.Key" aria-label="@f.Label bearbeiten" data-tip="Bearbeiten">@Ui.Icon("edit")</a>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    <form method="post" asp-page-handler="Move" asp-route-id="@Model.Id" asp-route-group="@g.Key" class="mat-btn-row">
+                        <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Schemas/Field?id=@Model.Id&group=@g.Key">@Ui.Icon("plus")<span>Feld hinzufügen</span></a>
+                        <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Schemas/Group?id=@Model.Id&group=@g.Key">@Ui.Icon("edit")<span>Gruppe bearbeiten</span></a>
+                        <button type="submit" name="dir" value="-1" class="mat-btn mat-btn--ghost mat-btn--sm" disabled="@(gi == 0)">@Ui.Icon("arrow-up")<span>Gruppe nach oben</span></button>
+                        <button type="submit" name="dir" value="1" class="mat-btn mat-btn--ghost mat-btn--sm" disabled="@(gi == def.Groups.Count - 1)">@Ui.Icon("arrow-down")<span>Gruppe nach unten</span></button>
+                    </form>
+                </div>
+            </section>
+        }
+
+        <form method="post" asp-page-handler="Import" asp-route-id="@Model.Id" enctype="multipart/form-data" class="mat-form">
+            <im-card title="Gruppen, Import und Export" icon="sliders">
+                <div class="mat-form__grid">
+                    <div class="mat-field">
+                        <label class="mat-label" for="import-file">Schema aus JSON übernehmen (in den Entwurf)</label>
+                        <input class="mat-input" type="file" id="import-file" name="file" accept=".json,application/json" />
+                    </div>
+                </div>
+                <div class="mat-btn-row">
+                    <a class="mat-btn mat-btn--secondary" href="/Schemas/Group?id=@Model.Id">@Ui.Icon("plus")<span>Gruppe hinzufügen</span></a>
+                    <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("upload")<span>Importieren</span></button>
+                    <a class="mat-btn mat-btn--secondary" href="/Schemas/Edit?id=@Model.Id&handler=Export">@Ui.Icon("download")<span>Als JSON exportieren</span></a>
+                    <a class="mat-btn mat-btn--secondary" href="/Schemas/Versions?id=@Model.Id">@Ui.Icon("history")<span>Versionen</span></a>
+                </div>
+            </im-card>
+        </form>
+    }
+}

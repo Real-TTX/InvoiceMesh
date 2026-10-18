@@ -1,0 +1,11 @@
+@page
+@model InvoiceMesh.Pages.Admin.Formats.IndexModel
+
+<div class="mat-list">
+    <partial name="_Table" model="Model.Table" />
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--primary" href="/Admin/Formats/Edit">@Ui.Icon("plus")<span>Neues Format</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Formats">@Ui.Icon("list")<span>Alle bekannten Formate</span></a>
+    </div>
+</div>
+<p class="mat-hint">Ein Eintrag hier bestimmt Standard, Profil, Version und die Regeln für Rechnungen mit dieser Spezifikationskennung (BT-24). Für eigene Feldzuordnungen legst du dazu ein Mapping an, das auf diesen Standard eingeschränkt ist.</p>

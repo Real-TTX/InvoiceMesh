@@ -1,0 +1,26 @@
+@page
+@model InvoiceMesh.Pages.Invoices.IndexModel
+
+@if (Model.PendingIds.Count > 0)
+{
+    <div class="mat-alert mat-alert--info" role="status" data-poll-ids="@string.Join(",", Model.PendingIds)">
+        @Ui.Icon("refresh")
+        <div class="mat-alert__body"><strong>@Ui.CountNoun(Model.PendingIds.Count, "Belege") in Verarbeitung.</strong> Die Liste aktualisiert sich, sobald sie fertig sind.</div>
+    </div>
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+    <partial name="_Table" model="Model.Table" />
+    <partial name="_Pager" model="Model.Pager" />
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--primary" href="/Invoices/Upload">@Ui.Icon("upload")<span>Hochladen</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Exports">@Ui.Icon("download")<span>Exportieren</span></a>
+        @if (Model.Outdated > 0)
+        {
+            <form method="post" asp-page-handler="Renormalize" class="im-inline-form">
+                <button type="submit" class="mat-btn mat-btn--secondary" data-confirm="@Ui.CountNoun(Model.Outdated, "Belege") wurden mit einer älteren Schemaversion normalisiert. Mit den aktiven Versionen neu normalisieren? Die alten Revisionen bleiben erhalten." data-confirm-ok="Neu normalisieren">@Ui.Icon("refresh")<span>@Ui.CountNoun(Model.Outdated, "Belege") neu normalisieren</span></button>
+            </form>
+        }
+    </div>
+</div>

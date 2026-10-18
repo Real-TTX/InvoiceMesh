@@ -1,0 +1,28 @@
+@page
+@model InvoiceMesh.Pages.Admin.ProcessingModel
+
+<form class="mat-form" method="post" novalidate>
+    <im-summary />
+    <im-card title="Ausgaben" icon="file-code">
+        <div class="mat-form__grid">
+            <im-switch for="Input.AutoXRechnung" label="XRechnung von selbst erzeugen, wenn alle Angaben vorhanden sind" />
+            <im-select for="Input.XRechnungSyntax" label="Syntax der XRechnung" items="ProcessingModel.Syntaxes" show-if="Input.AutoXRechnung" show-value="true" />
+            <im-switch for="Input.AutoPdf" label="Lesbare PDF-Ansicht erzeugen, wenn es kein Original-PDF gibt (XML, Bilder)" />
+        </div>
+        <p class="mat-hint">Eine XRechnung entsteht nur aus vollständigen, stimmigen Daten nach den Regeln von EN 16931 und XRechnung, unabhängig von deinem Zielschema. Nichts wird ergänzt.</p>
+    </im-card>
+    <im-card title="Texterkennung" icon="scan">
+        <div class="mat-form__grid">
+            <im-input for="Input.OcrLanguages" label="Sprachen" autocomplete="off" hint="Tesseract-Codes mit +, z. B. deu+eng+fra+spa+ita+nld. Das Image enthält diese sechs." />
+        </div>
+        <p class="mat-hint">@(Model.OcrAvailable ? $"Installiert: {Model.OcrVersion}." : "Tesseract ist auf diesem System nicht installiert: Scans und Bilder werden als nicht lesbar gemeldet.")</p>
+    </im-card>
+    <im-card title="Prüfung und Eingang" icon="shield">
+        <div class="mat-form__grid">
+            <im-input for="Input.Tolerance" label="Toleranz der Summenprüfung" type="number" min="0" max="1" step="0.01" hint="Wie weit eine berechnete Summe von der angegebenen abweichen darf (Rundung), in der Währung." />
+            <im-input for="Input.MaxUploadMb" label="Größte Datei (MB)" type="number" min="1" max="200" step="1" />
+            <im-switch for="Input.WarnDuplicates" label="Doppelte Dateien (gleicher SHA-256) annehmen und im Verlauf vermerken" />
+        </div>
+    </im-card>
+    <im-buttons back-href="/" />
+</form>

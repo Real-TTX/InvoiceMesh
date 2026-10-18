@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The part of InvoiceMesh that has no web types: recognising formats, reading UBL, CII and the text of a PDF or a scan, the semantic model of EN 16931,
+       the mapping into a schema of the user's, the rules of the standards, the XRechnung writers, the exports, TOTP and password hashing.
+       Everything in here is covered by unit tests without a browser or a database. -->
+
+  <PropertyGroup>
+    <RootNamespace>InvoiceMesh.Core</RootNamespace>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reads PDFs: the attachments of a hybrid invoice and the words of the text layer (pure managed code). -->
+    <PackageReference Include="PdfPig" Version="0.1.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="InvoiceMesh.Tests" />
+  </ItemGroup>
+
+</Project>

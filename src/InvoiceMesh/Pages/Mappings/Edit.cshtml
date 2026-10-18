@@ -1,0 +1,191 @@
+@page
+@model InvoiceMesh.Pages.Mappings.EditModel
+@using InvoiceMesh.Core.Mapping
+
+<form class="mat-form" method="post" novalidate>
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <im-summary />
+    <im-card title="Mapping" icon="shuffle">
+        <div class="mat-form__grid">
+            <im-input for="Input.Name" label="Name" required="true" autocomplete="off" />
+            @if (Model.Set is null)
+            {
+                <im-select for="Input.TargetSchemaId" label="Zielschema" items="Model.Schemas" />
+                <im-select for="Input.Template" label="Beginnen mit" items="Model.Templates" />
+            }
+            else
+            {
+                <div class="mat-field"><span class="mat-label">Zielschema</span><span><a href="/Schemas/Edit?id=@Model.Set.TargetSchemaId">@Model.Set.TargetSchema?.Name</a></span><input type="hidden" name="Input.TargetSchemaId" value="@Model.Set.TargetSchemaId" /></div>
+            }
+            <im-textarea for="Input.Description" label="Beschreibung" rows="2" full="true" />
+        </div>
+    </im-card>
+    <im-card title="Gilt für" icon="filter">
+        <p class="mat-hint">Leer bedeutet: beliebig. Ein Beleg nimmt das genaueste passende Mapping, bei Gleichstand das mit der höheren Priorität.</p>
+        <div class="mat-form__grid">
+            <im-select for="Input.Syntax" label="Syntax" items="EditModel.Syntaxes" />
+            <im-input for="Input.Standard" label="Standard enthält" autocomplete="off" hint="z. B. XRechnung, Peppol, ZUGFeRD" />
+            <im-input for="Input.Profile" label="Profil enthält" autocomplete="off" hint="z. B. Basic, Extended" />
+            <im-input for="Input.FormatVersion" label="Version" autocomplete="off" hint="z. B. 3.0" />
+            <im-input for="Input.Priority" label="Priorität" type="number" min="-1000" max="1000" step="1" />
+            <im-switch for="Input.IsEnabled" label="Eingeschaltet" />
+        </div>
+    </im-card>
+    @if (Model.Set is null)
+    {
+        <im-buttons save-text="Anlegen" back-href="/Mappings" />
+    }
+    else
+    {
+        <im-buttons back-href="/Mappings" delete-url="@Url.Page("/Mappings/Edit", "Delete", new { id = Model.Id })" delete-confirm="Dieses Mapping löschen? Belege, die damit normalisiert wurden, behalten ihre Daten.">
+            <a class="mat-btn mat-btn--secondary" href="/Mappings/Test?id=@Model.Id">@Ui.Icon("flask")<span>Testen</span></a>
+        </im-buttons>
+    }
+</form>
+
+@if (Model.Set is not null && Model.Definition is { } def)
+{
+    <section class="mat-card" aria-labelledby="version-title">
+        <div class="mat-card__head">@Ui.Icon("history")<h2 class="mat-card__title" id="version-title">Version</h2>@if (Model.Draft is not null) { @Labels.Pill(VersionState.Draft) } else if (Model.Active is not null) { @Labels.Pill(VersionState.Active) }</div>
+        <div class="mat-card__body">
+            @if (Model.Draft is null)
+            {
+                <p>Die Regeln unten sind die aktive Version @Model.Active?.Number. Jede Änderung legt einen Entwurf an, den du in der Vorschau an Beispielbelegen prüfst, bevor du ihn aktivierst.</p>
+            }
+            else
+            {
+                <p>Du bearbeitest den <strong>Entwurf (Version @Model.Draft.Number)</strong>. <a href="/Mappings/Test?id=@Model.Id">In der Vorschau testen</a></p>
+                @if (Model.Changes.Count > 0)
+                {
+                    <h3 class="mat-h4">Änderungen gegenüber Version @Model.Active?.Number</h3>
+                    <ul class="im-evidence">@foreach (var c in Model.Changes) { <li>@c</li> }</ul>
+                }
+                <form method="post" asp-page-handler="Activate" asp-route-id="@Model.Id" class="mat-form">
+                    <div class="mat-form__grid">
+                        <div class="mat-field mat-field--full">
+                            <label class="mat-label" for="note">Was ändert sich (für die Versionsgeschichte)</label>
+                            <input class="mat-input" id="note" name="note" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="mat-btn-row">
+                        <button type="submit" class="mat-btn mat-btn--primary" data-confirm="Den Entwurf als Version @Model.Draft.Number aktivieren?" data-confirm-ok="Aktivieren">@Ui.Icon("check")<span>Entwurf aktivieren</span></button>
+                        <a class="mat-btn mat-btn--secondary" href="/Mappings/Test?id=@Model.Id">@Ui.Icon("flask")<span>Vorschau</span></a>
+                        <button type="submit" asp-page-handler="Discard" asp-route-id="@Model.Id" class="mat-btn mat-btn--secondary" data-confirm="Den Entwurf verwerfen?" data-confirm-ok="Verwerfen">@Ui.Icon("x")<span>Entwurf verwerfen</span></button>
+                    </div>
+                </form>
+            }
+            @if (Model.SchemaIsDraft)
+            {
+                <p class="mat-hint">Das Zielschema hat einen Entwurf; hier siehst du dessen Felder. Aktiviere das Schema vor dem Mapping, wenn Regeln neue Felder füllen.</p>
+            }
+            @if (Model.Problems.Count > 0)
+            {
+                <div class="mat-alert mat-alert--warning" role="note">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Probleme der Definition:</strong><ul class="mat-alert__list">@foreach (var p in Model.Problems) { <li>@p</li> }</ul></div></div>
+            }
+        </div>
+    </section>
+
+    @if (Model.Schema is { } schema)
+    {
+        var repeating = schema.Groups.Where(g => g.Repeating).ToList();
+        if (repeating.Count > 0)
+        {
+            <form method="post" asp-page-handler="Lists" asp-route-id="@Model.Id" class="mat-form">
+                <im-card title="Listen" icon="list" sub="Woraus die wiederholten Gruppen gefüllt werden">
+                    <div class="mat-form__grid">
+                        @foreach (var g in repeating)
+                        {
+                            var current = def.CollectionOf(g.Key);
+                            var isXml = current?.StartsWith("xml:", StringComparison.Ordinal) == true;
+                            <div class="mat-field">
+                                <label class="mat-label" for="list-@g.Key">@g.Label</label>
+                                <select class="mat-select" id="list-@g.Key" name="lists[@g.Key]">
+                                    @foreach (var o in EditModel.Lists) { <option value="@o.Value" selected="@(o.Value == (current ?? ""))">@o.Text</option> }
+                                    <option value="xml" selected="@isXml">Eigener XML-Pfad</option>
+                                </select>
+                            </div>
+                            <div class="mat-field" data-show-if="lists[@g.Key]" data-show-value="xml">
+                                <label class="mat-label" for="path-@g.Key">XML-Pfad der Einträge von „@g.Label“</label>
+                                <input class="mat-input mat-mono" id="path-@g.Key" name="paths[@g.Key]" value="@(isXml ? current![4..] : "")" placeholder="/Invoice/cac:InvoiceLine" autocomplete="off" />
+                            </div>
+                        }
+                    </div>
+                    <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("save")<span>Listen speichern</span></button></div>
+                </im-card>
+            </form>
+        }
+
+        foreach (var g in schema.Groups)
+        {
+            <section class="mat-card" aria-labelledby="rules-@g.Key">
+                <div class="mat-card__head">@Ui.Icon(g.Repeating ? "list" : "folder")<h2 class="mat-card__title" id="rules-@g.Key">@g.Label</h2><span class="mat-card__sub">@(g.Repeating ? $"je Eintrag aus {def.CollectionOf(g.Key) ?? "– (keine Liste)"}" : g.Key)</span></div>
+                <div class="mat-card__body">
+                    <div class="mat-table-wrap">
+                        <table class="mat-table">
+                            <caption class="mat-sr-only">Regeln für @g.Label</caption>
+                            <thead><tr><th scope="col">Zielfeld</th><th scope="col">Quellen (Priorität)</th><th scope="col" class="mat-hide-sm">Verarbeitung</th><th scope="col"><span class="mat-sr-only">Aktionen</span></th></tr></thead>
+                            <tbody>
+                                @foreach (var f in g.Fields)
+                                {
+                                    var target = $"{g.Key}.{f.Key}";
+                                    var rules = Model.RulesFor(target).ToList();
+                                    if (rules.Count == 0)
+                                    {
+                                        <tr class="@(f.Required ? "is-problem" : "")">
+                                            <td data-label="Zielfeld">@Ui.NameWithSub(f.Label + (f.Required ? " *" : ""), null, target)</td>
+                                            <td data-label="Quellen"><span class="mat-muted">keine Regel@(f.DefaultValue is null ? "" : $", Standardwert „{f.DefaultValue}“")</span></td>
+                                            <td data-label="Verarbeitung" class="mat-hide-sm">–</td>
+                                            <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Mappings/Rule?id=@Model.Id&target=@target" aria-label="Regel für @f.Label anlegen" data-tip="Regel anlegen">@Ui.Icon("plus")</a></div></td>
+                                        </tr>
+                                    }
+                                    @for (var i = 0; i < rules.Count; i++)
+                                    {
+                                        var r = rules[i];
+                                        <tr>
+                                            <td data-label="Zielfeld">@Ui.NameWithSub(f.Label + (f.Required ? " *" : "") + (rules.Count > 1 ? $" (Regel {i + 1})" : ""), $"/Mappings/Rule?id={Model.Id}&target={target}&index={i}", target)</td>
+                                            <td data-label="Quellen">
+                                                <div class="im-chain">
+                                                    @for (var s = 0; s < r.Sources.Count; s++)
+                                                    {
+                                                        if (s > 0) { <span class="im-chain__sep">@(r.Combine == CombineMode.Concat ? "+" : "sonst")</span> }
+                                                        <span class="im-chain__item">@r.Sources[s]</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td data-label="Verarbeitung" class="mat-hide-sm">
+                                                @if (r.Condition is { } c) { <small class="im-sub">wenn @c.Source @c.Operator @c.Value</small> }
+                                                @if (r.Transforms.Count > 0) { <small class="im-sub">@string.Join(" → ", r.Transforms.Select(EditModel.Describe))</small> }
+                                                @if (r.DefaultValue is not null) { <small class="im-sub">sonst „@r.DefaultValue“</small> }
+                                                @if (r.Condition is null && r.Transforms.Count == 0 && r.DefaultValue is null) { <span class="mat-muted">direkt</span> }
+                                            </td>
+                                            <td class="mat-table__cell-actions"><div class="mat-table__actions">
+                                                <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Mappings/Rule?id=@Model.Id&target=@target&index=@i" aria-label="Regel bearbeiten" data-tip="Bearbeiten">@Ui.Icon("edit")</a>
+                                                <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Mappings/Rule?id=@Model.Id&target=@target&index=@rules.Count" aria-label="Weitere Regel mit Bedingung" data-tip="Weitere Regel (mit Bedingung)">@Ui.Icon("plus")</a>
+                                            </div></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        }
+    }
+
+    <form method="post" asp-page-handler="Import" asp-route-id="@Model.Id" enctype="multipart/form-data" class="mat-form">
+        <im-card title="Import und Export" icon="sliders">
+            <div class="mat-form__grid">
+                <div class="mat-field">
+                    <label class="mat-label" for="import-file">Regeln aus JSON übernehmen (in den Entwurf)</label>
+                    <input class="mat-input" type="file" id="import-file" name="file" accept=".json,application/json" />
+                </div>
+            </div>
+            <div class="mat-btn-row">
+                <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("upload")<span>Importieren</span></button>
+                <a class="mat-btn mat-btn--secondary" href="/Mappings/Edit?id=@Model.Id&handler=Export">@Ui.Icon("download")<span>Als JSON exportieren</span></a>
+                <a class="mat-btn mat-btn--secondary" href="/Mappings/Versions?id=@Model.Id">@Ui.Icon("history")<span>Versionen</span></a>
+            </div>
+        </im-card>
+    </form>
+}

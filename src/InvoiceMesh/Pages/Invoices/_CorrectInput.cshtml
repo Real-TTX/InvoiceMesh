@@ -1,0 +1,16 @@
+@model InvoiceMesh.Pages.Invoices.CorrectModel.Input
+@*
+    One field of the correction form: the key goes along hidden, the value is the current one; an uncertain value says so in its hint.
+*@
+@{
+    var id = "f" + Model.Index;
+}
+<div class="mat-field">
+    <label class="mat-label" for="@id">@Model.Label</label>
+    <input type="hidden" name="Fields[@Model.Index].Key" value="@Model.Key" />
+    <input class="mat-input" id="@id" name="Fields[@Model.Index].Value" value="@Model.Value" autocomplete="off" aria-invalid="@(Model.Current is { Confidence: < InvoiceMesh.Core.Semantics.Confidence.High } ? "true" : null)" aria-describedby="@(Model.Hint is null ? null : id + "-hint")" />
+    @if (Model.Hint is not null)
+    {
+        <span class="mat-hint" id="@id-hint">@Model.Hint</span>
+    }
+</div>

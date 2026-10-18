@@ -1,0 +1,156 @@
+@page
+@model InvoiceMesh.Pages.Invoices.DataModel
+@using InvoiceMesh.Core.Mapping
+@{
+    var report = Model.Ctx.Report;
+}
+
+<partial name="_LinkTabs" model="Model.Tabs" />
+
+@if (Model.Ctx.Extraction is null)
+{
+    <div class="mat-empty mat-empty--framed">
+        <span class="mat-empty__icon">@Ui.Icon("columns")</span>
+        <div class="mat-empty__title">Noch keine Daten</div>
+        <p>Der Beleg wurde noch nicht ausgelesen.</p>
+    </div>
+}
+else
+{
+    <im-tabs id="data" label="Daten des Belegs" selected="@(Model.RawSearch is null ? null : "raw")">
+        <im-tab id="compare" title="Vergleich" icon="columns">
+            @if (report is null)
+            {
+                <p class="mat-muted">Keine normalisierten Daten: @(Model.Doc.ProcessingError ?? "die Normalisierung ist nicht gelaufen.")</p>
+            }
+            else
+            {
+                <p class="mat-hint" id="normalized">Zielschema „@report.SchemaName“ v@(report.SchemaVersion), Mapping „@report.MappingName“ v@(report.MappingVersion). Links die Quellen in der Reihenfolge ihrer Priorität mit ihren Werten, rechts der normalisierte Wert.</p>
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">Quelldaten und normalisierte Daten</caption>
+                        <thead><tr><th scope="col">Zielfeld</th><th scope="col">Quellen</th><th scope="col">Normalisiert</th><th scope="col">Status</th></tr></thead>
+                        <tbody>
+                            @foreach (var f in report.Fields)
+                            {
+                                var problem = f.Status is FieldStatus.Invalid || (f.Required && f.Value is null);
+                                <tr class="@(problem ? "is-problem" : f.Status == FieldStatus.Conflict ? "is-uncertain" : "")">
+                                    <td data-label="Zielfeld">@Ui.NameWithSub($"{f.GroupLabel} · {f.FieldLabel}{(f.Item is { } i ? $" ({i})" : "")}{(f.Required ? " *" : "")}", null, f.Address)</td>
+                                    <td data-label="Quellen">
+                                        @if (f.Candidates.Count == 0)
+                                        {
+                                            <span class="mat-muted">keine Regel</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="im-chain">
+                                                @foreach (var c in f.Candidates)
+                                                {
+                                                    <span class="im-chain__item" data-tip="@(c.Value ?? "leer")">@(c.Used ? "✓ " : "")@c.Source = @(c.Value is null ? "–" : c.Value.Length > 40 ? c.Value[..40] + "…" : c.Value)</span>
+                                                }
+                                            </div>
+                                        }
+                                        @if (f.Applied.Count > 0) { <span class="im-source">→ @string.Join(" → ", f.Applied)</span> }
+                                    </td>
+                                    <td data-label="Normalisiert"><span class="im-break">@(f.Value ?? "–")</span></td>
+                                    <td data-label="Status">@Labels.Pill(f.Status)@if (f.Message is not null) { <small class="im-sub mat-muted">@f.Message</small> }</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </im-tab>
+
+        <im-tab id="terms" title="Quelldaten (EN 16931)" icon="file-text">
+            <p class="mat-hint">Die Geschäftsbegriffe, wie sie ausgelesen wurden, und was nach Korrekturen gilt. Unsicher erkannte Werte sind markiert.</p>
+            @foreach (var (part, rows) in Model.Header)
+            {
+                <h3 class="mat-h4">@part</h3>
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">@part</caption>
+                        <thead><tr><th scope="col">Begriff</th><th scope="col">Ausgelesen</th><th scope="col">Aktuell</th><th scope="col" class="mat-hide-sm">Quelle</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in rows) { <partial name="_Term" model="r" /> }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            @foreach (var (group, label, items) in Model.Groups)
+            {
+                <h3 class="mat-h4">@label (@group)</h3>
+                @for (var i = 0; i < items.Count; i++)
+                {
+                    <div class="mat-table-wrap">
+                        <table class="mat-table">
+                            <caption class="mat-sr-only">@label @(i + 1)</caption>
+                            <thead><tr><th scope="col">@(i + 1). Eintrag</th><th scope="col">Ausgelesen</th><th scope="col">Aktuell</th><th scope="col" class="mat-hide-sm">Quelle</th></tr></thead>
+                            <tbody>
+                                @foreach (var r in items[i]) { <partial name="_Term" model="r" /> }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+        </im-tab>
+
+        <im-tab id="unused" title="Nicht zugeordnet" icon="filter" count="@(report?.Unused.Count)">
+            @if (report is null || report.Unused.Count == 0)
+            {
+                <p class="mat-muted">Jeder ausgelesene Geschäftsbegriff wird von einer Regel verwendet.</p>
+            }
+            else
+            {
+                <p class="mat-hint">Diese Werte wurden ausgelesen, aber von keiner Regel des Mappings verwendet. Nichts geht verloren: sie bleiben in den Quelldaten und lassen sich einem Feld zuordnen.</p>
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">Nicht zugeordnete Quellfelder</caption>
+                        <thead><tr><th scope="col">Quelle</th><th scope="col">Bedeutung</th><th scope="col">Wert</th></tr></thead>
+                        <tbody>
+                            @foreach (var u in report.Unused)
+                            {
+                                <tr><td data-label="Quelle"><span class="im-source">@u.Reference</span></td><td data-label="Bedeutung">@u.Label</td><td data-label="Wert"><span class="im-break">@u.Value</span></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </im-tab>
+
+        <im-tab id="raw" title="Rohdaten" icon="file-code" count="@Model.Ctx.Raw.Count">
+            <form method="get" class="mat-toolbar" role="search">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="mat-input-icon mat-toolbar__search">
+                    @Ui.Icon("search")
+                    <input class="mat-input" type="search" name="q" value="@Model.RawSearch" placeholder="Pfad oder Wert ..." aria-label="Rohdaten durchsuchen" />
+                </div>
+                <span class="mat-toolbar__spacer"></span>
+                <span class="mat-toolbar__info">@(Model.RawTotal > DataModel.MaxRaw ? $"{DataModel.MaxRaw} von {Model.RawTotal}" : Ui.CountNoun(Model.RawTotal, "Felder"))</span>
+            </form>
+            <p class="mat-hint">Jedes Blatt des XML (mit Index bei wiederholten Elementen) bzw. jede „Bezeichnung: Wert“-Zeile des Texts. Ein Mapping kann jede dieser Quellen nutzen (xml:… oder text:…).</p>
+            <div class="mat-table-wrap">
+                <table class="mat-table">
+                    <caption class="mat-sr-only">Rohdaten</caption>
+                    <thead><tr><th scope="col">Pfad</th><th scope="col">Wert</th></tr></thead>
+                    <tbody>
+                        @foreach (var f in Model.Raw)
+                        {
+                            <tr><td data-label="Pfad"><span class="im-source">@f.Path</span></td><td data-label="Wert"><span class="im-break">@f.Value</span></td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </im-tab>
+    </im-tabs>
+
+    <div class="mat-btn-row">
+        <a class="mat-btn mat-btn--primary" href="/Invoices/Correct?id=@Model.Id">@Ui.Icon("edit")<span>Korrigieren</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/files/@Model.Id/extracted.json">@Ui.Icon("download")<span>Quelldaten (JSON)</span></a>
+        @if (Model.Ctx.Data is not null)
+        {
+            <a class="mat-btn mat-btn--secondary" href="/files/@Model.Id/normalized.json">@Ui.Icon("download")<span>Normalisiert (JSON)</span></a>
+        }
+        <a class="mat-btn mat-btn--secondary" href="/Invoices/Details?id=@Model.Id">@Ui.Icon("back")<span>Zurück</span></a>
+    </div>
+}

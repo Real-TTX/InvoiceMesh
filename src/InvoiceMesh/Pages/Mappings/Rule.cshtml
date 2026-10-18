@@ -1,0 +1,155 @@
+@page
+@model InvoiceMesh.Pages.Mappings.RuleModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using InvoiceMesh.Core.Mapping
+
+<div class="im-split">
+    <form class="mat-form" method="post" asp-route-id="@Model.Id" asp-route-target="@Model.Target" asp-route-index="@Model.Index" asp-route-sample="@Model.Sample" novalidate>
+        <im-summary />
+        <im-card title="Quellen" icon="shuffle" sub="in der Reihenfolge ihrer Priorität">
+            <div class="mat-form__grid">
+                <div class="mat-field mat-field--full">
+                    <label class="mat-label" for="rule-sources">Quellen, eine je Zeile</label>
+                    <textarea class="mat-textarea mat-mono" id="rule-sources" name="Input.Sources" rows="5" aria-describedby="rule-sources-hint">@Model.Input.Sources</textarea>
+                    <span class="mat-hint" id="rule-sources-hint">Wähle rechts aus dem Katalog oder schreibe selbst: bt:BT-1 (EN 16931), @(Model.Group.Repeating ? "head:BT-5 (Rechnung), xml:Pfad im Eintrag, " : "xml:/Pfad, text:Bezeichnung, ")meta:fileName, const:fester Wert.</span>
+                    <span class="mat-error" aria-live="polite">@ViewData.ModelState["Input.Sources"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                </div>
+                <im-radios for="Input.Combine" label="Mehrere Quellen" items="@(new List<SelectListItem> { new("Erste mit Wert (Alternativen)", nameof(CombineMode.First)), new("Alle zusammenführen", nameof(CombineMode.Concat)) })" />
+                <im-input for="Input.Separator" label="Trennzeichen beim Zusammenführen" show-if="Input.Combine" show-value="Concat" autocomplete="off" />
+                <im-switch for="Input.IgnoreDifferences" label="Abweichende Werte der Alternativen sind erwartet (kein Konflikt melden)" show-if="Input.Combine" show-value="First" />
+            </div>
+        </im-card>
+
+        <im-card title="Transformationen" icon="sliders" sub="nacheinander, von oben nach unten">
+            <div class="mat-table-wrap">
+                <table class="mat-table">
+                    <caption class="mat-sr-only">Transformationen</caption>
+                    <thead><tr><th scope="col">Schritt</th><th scope="col">Argument 1</th><th scope="col">Argument 2</th></tr></thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Input.Steps.Count; i++)
+                        {
+                            var s = Model.Input.Steps[i];
+                            <tr>
+                                <td data-label="Schritt">
+                                    <select class="mat-select" name="Input.Steps[@i].Op" aria-label="Schritt @(i + 1)">
+                                        @foreach (var o in RuleModel.Operations) { <option value="@o.Value" selected="@(o.Value == (s.Op ?? ""))">@o.Text</option> }
+                                    </select>
+                                </td>
+                                <td data-label="Argument 1"><input class="mat-input" name="Input.Steps[@i].Arg" value="@s.Arg" aria-label="Schritt @(i + 1), Argument 1" autocomplete="off" /></td>
+                                <td data-label="Argument 2"><input class="mat-input" name="Input.Steps[@i].Arg2" value="@s.Arg2" aria-label="Schritt @(i + 1), Argument 2" autocomplete="off" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <details class="mat-details">
+                <summary>Was die Schritte tun</summary>
+                <dl class="mat-kv">
+                    @foreach (var t in Transforms.All)
+                    {
+                        <dt>@t.Label</dt><dd>@t.Description@(t.ArgLabel is null ? "" : $" Argument 1: {t.ArgLabel}.")@(t.Arg2Label is null ? "" : $" Argument 2: {t.Arg2Label}.")</dd>
+                    }
+                </dl>
+            </details>
+        </im-card>
+
+        <im-card title="Bedingung und Standardwert" icon="filter">
+            <div class="mat-form__grid">
+                <im-switch for="Input.UseCondition" label="Regel gilt nur unter einer Bedingung" />
+                <im-input for="Input.ConditionSource" label="Wenn Quelle" show-if="Input.UseCondition" show-value="true" autocomplete="off" hint="z. B. meta:syntax oder bt:BT-3" />
+                <im-select for="Input.ConditionOperator" label="Vergleich" items="RuleModel.Operators" show-if="Input.UseCondition" show-value="true" />
+                <im-input for="Input.ConditionValue" label="Wert" show-if="Input.UseCondition" show-value="true" autocomplete="off" />
+                <im-input for="Input.DefaultValue" label="Standardwert, wenn keine Quelle einen Wert hat" autocomplete="off" hint="Wird als Standardwert gekennzeichnet, nie als gefunden." />
+                <im-input for="Input.Note" label="Notiz" autocomplete="off" />
+            </div>
+            <p class="mat-hint">Hat ein Feld mehrere Regeln, gilt die erste, deren Bedingung erfüllt ist. So lassen sich je Format, Profil oder Lieferant eigene Quellen festlegen.</p>
+        </im-card>
+
+        @if (Model.IsNew)
+        {
+            <im-buttons back-href="@($"/Mappings/Edit?id={Model.Id}")" />
+        }
+        else
+        {
+            <im-buttons back-href="@($"/Mappings/Edit?id={Model.Id}")" delete-url="@Url.Page("/Mappings/Rule", "Delete", new { id = Model.Id, target = Model.Target, index = Model.Index })" delete-confirm="Diese Regel aus dem Entwurf entfernen?" />
+        }
+    </form>
+
+    <aside class="mat-grid">
+        <section class="mat-card" aria-labelledby="sample-title">
+            <div class="mat-card__head">@Ui.Icon("flask")<h2 class="mat-card__title" id="sample-title">Ergebnis am Beispiel</h2></div>
+            <div class="mat-card__body">
+                <form method="get" class="mat-form">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="target" value="@Model.Target" />
+                    <input type="hidden" name="index" value="@Model.Index" />
+                    <div class="mat-field">
+                        <label class="mat-label" for="sample">Beispielbeleg</label>
+                        <select class="mat-select" id="sample" name="sample" data-submit-on-change>
+                            @foreach (var s in Model.Samples) { <option value="@s.Value" selected="@(s.Value == Model.Sample?.ToString())">@s.Text</option> }
+                        </select>
+                    </div>
+                </form>
+                @if (Model.SampleDoc is null)
+                {
+                    <p class="mat-muted">Noch kein verarbeiteter Beleg zum Testen.</p>
+                }
+                else if (Model.Outcomes.Count == 0)
+                {
+                    <p class="mat-muted">Kein Ergebnis für dieses Feld.</p>
+                }
+                else
+                {
+                    <ul class="im-notes">
+                        @foreach (var o in Model.Outcomes)
+                        {
+                            <li class="im-note">
+                                <div class="im-note__body">
+                                    <span class="im-note__title">@(o.Item is { } item ? $"Eintrag {item}: " : "")@(o.Value ?? "–")</span>
+                                    <span class="im-note__meta">@Labels.Of(o.Status)@(o.Source is null ? "" : " · " + o.Source)@(o.Applied.Count > 0 ? " · " + string.Join(" → ", o.Applied) : "")</span>
+                                    @if (o.Message is not null) { <span class="im-note__meta">@o.Message</span> }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                    <p class="mat-hint">Gezeigt wird die gespeicherte Regel (Entwurf, sonst aktive Version). Speichere, um eine Änderung zu sehen.</p>
+                }
+            </div>
+        </section>
+
+        <section class="mat-card" aria-labelledby="catalog-title">
+            <div class="mat-card__head">@Ui.Icon("search")<h2 class="mat-card__title" id="catalog-title">Quellen</h2></div>
+            <div class="mat-card__body">
+                <div class="mat-input-icon">
+                    @Ui.Icon("search")
+                    <input class="mat-input" type="search" id="catalog-q" placeholder="Begriff, Pfad oder Wert ..." aria-label="Quellen durchsuchen" autocomplete="off" data-item-filter="catalog" />
+                </div>
+                <div class="im-catalog">
+                    <ul class="mat-itemlist mat-itemlist--sticky mat-itemlist--scroll mat-itemlist--lines-inset mat-itemlist--compact" id="catalog" aria-label="Katalog der Quellen" data-itemlist>
+                        @foreach (var group in Model.Catalog.GroupBy(c => c.Kind))
+                        {
+                            <li class="mat-itemlist__group">
+                                <h3 class="mat-itemlist__divider">@group.Key</h3>
+                                <ul class="mat-itemlist__items">
+                                    @foreach (var c in group)
+                                    {
+                                        <li class="mat-item">
+                                            <div class="mat-item__main">
+                                                <span class="mat-item__body">
+                                                    <span class="mat-item__title im-source">@c.Reference</span>
+                                                    <span class="mat-item__text">@c.Label@(c.Sample is null ? "" : $" · {(c.Sample.Length > 50 ? c.Sample[..50] + "…" : c.Sample)}")</span>
+                                                </span>
+                                            </div>
+                                            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm mat-item__aside" data-add-source="@c.Reference" data-target="rule-sources" aria-label="@c.Reference als Quelle hinzufügen" data-tip="Hinzufügen">@Ui.Icon("plus")</button>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                        <li class="mat-itemlist__empty" hidden>Keine passende Quelle.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </aside>
+</div>

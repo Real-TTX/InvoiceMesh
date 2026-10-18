@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/InvoiceMesh.Core/InvoiceMesh.Core.csproj" />
+    <Project Path="src/InvoiceMesh/InvoiceMesh.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InvoiceMesh.Tests/InvoiceMesh.Tests.csproj" />
+  </Folder>
+</Solution>

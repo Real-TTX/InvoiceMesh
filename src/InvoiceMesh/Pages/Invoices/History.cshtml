@@ -1,0 +1,117 @@
+@page
+@model InvoiceMesh.Pages.Invoices.HistoryModel
+@{
+    var active = Model.Ctx.ActiveCorrections(CorrectionScope.Source).Concat(Model.Ctx.Corrections.Where(c => c.Scope == CorrectionScope.Target)).Select(c => c.Id).ToHashSet();
+}
+
+<partial name="_LinkTabs" model="Model.Tabs" />
+
+<im-tabs id="history" label="Verlauf des Belegs">
+    <im-tab id="events" title="Ereignisse" icon="activity" count="@Model.Events.Count">
+        <ul class="im-notes">
+            @foreach (var e in Model.Events)
+            {
+                <li class="im-note">
+                    @Ui.Icon(InvoiceMesh.Pages.IndexModel.Icon(e.Kind), $"im-note__icon im-note__icon--{InvoiceMesh.Pages.IndexModel.Tone(e.Kind)}")
+                    <div class="im-note__body"><span class="im-note__title">@e.Kind</span><span class="im-note__meta">@e.Message</span></div>
+                    <span class="im-note__end">@Fmt.Moment(e.OccurredDate)<small class="im-sub">@e.UserName</small></span>
+                </li>
+            }
+        </ul>
+    </im-tab>
+
+    <im-tab id="corrections" title="Korrekturen" icon="edit" count="@Model.Ctx.Corrections.Count">
+        @if (Model.Ctx.Corrections.Count == 0)
+        {
+            <p class="mat-muted">Noch keine Korrektur. Korrekturen ändern nie die ausgelesenen Daten: sie werden darübergelegt und bleiben hier sichtbar.</p>
+        }
+        else
+        {
+            <div class="mat-table-wrap">
+                <table class="mat-table">
+                    <caption class="mat-sr-only">Korrekturen</caption>
+                    <thead><tr><th scope="col">Feld</th><th scope="col">Vorher</th><th scope="col">Nachher</th><th scope="col" class="mat-hide-sm">Wer, wann, warum</th><th scope="col"><span class="mat-sr-only">Aktionen</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var c in Model.Ctx.Corrections.OrderByDescending(c => c.Id))
+                        {
+                            <tr>
+                                <td data-label="Feld">@Ui.NameWithSub(c.Scope == CorrectionScope.Source ? InvoiceMesh.Core.Semantics.SemanticCatalog.LabelOfKey(c.Key) : c.Key, null, c.Scope == CorrectionScope.Source ? c.Key : "Zielschema")</td>
+                                <td data-label="Vorher"><span class="im-break">@(c.PreviousValue ?? "–")</span></td>
+                                <td data-label="Nachher">@if (c.Reverted) { @Ui.Pill("zurückgenommen", "plain") } else { <span class="im-break">@(c.Value ?? "(geleert)")</span> }</td>
+                                <td data-label="Wer" class="mat-hide-sm">@c.UserName, @Fmt.Moment(c.CreateDate)@if (c.Reason is not null) { <small class="im-sub mat-muted">@c.Reason</small> }</td>
+                                <td class="mat-table__cell-actions">
+                                    @if (!c.Reverted && active.Contains(c.Id))
+                                    {
+                                        <form method="post" asp-page-handler="Revert" asp-route-id="@Model.Id" asp-route-correctionId="@c.Id" class="im-inline-form">
+                                            <button type="submit" class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" aria-label="Zurücknehmen" data-tip="Zurücknehmen" data-confirm="Diese Korrektur zurücknehmen? Es gilt wieder der ausgelesene Wert." data-confirm-ok="Zurücknehmen">@Ui.Icon("undo")</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </im-tab>
+
+    <im-tab id="revisions" title="Revisionen" icon="layers" count="@Model.Revisions.Count">
+        <p class="mat-hint">Jede Revision sind die normalisierten Daten aus einer Auslesung, mit einer Version von Schema und Mapping. Sie wird nie geändert.</p>
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Revisionen</caption>
+                <thead><tr><th scope="col">Revision</th><th scope="col">Anlass</th><th scope="col" class="mat-hide-sm">Schema</th><th scope="col" class="mat-hide-sm">Mapping</th><th scope="col">Erstellt</th></tr></thead>
+                <tbody>
+                    @foreach (var r in Model.Revisions)
+                    {
+                        <tr>
+                            <td data-label="Revision">@r.Revision.Number @if (r.Revision.Id == Model.Doc.CurrentRevisionId) { @Ui.Pill("aktuell", "ok") }</td>
+                            <td data-label="Anlass">@r.Revision.Reason@(r.Revision.CorrectionCount > 0 ? $" ({r.Revision.CorrectionCount} Korrekturen)" : "")</td>
+                            <td data-label="Schema" class="mat-hide-sm">@r.Schema</td>
+                            <td data-label="Mapping" class="mat-hide-sm">@r.Mapping</td>
+                            <td data-label="Erstellt">@Fmt.Moment(r.Revision.CreateDate)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </im-tab>
+
+    <im-tab id="runs" title="Auslesungen und Prüfungen" icon="refresh">
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Auslesungen</caption>
+                <thead><tr><th scope="col">Auslesung</th><th scope="col">Verfahren</th><th scope="col" class="mat-hide-sm">Dauer</th><th scope="col">Zeit</th></tr></thead>
+                <tbody>
+                    @foreach (var e in Model.Extractions)
+                    {
+                        <tr>
+                            <td data-label="Auslesung">@e.Number @if (e.Id == Model.Doc.CurrentExtractionId) { @Ui.Pill("aktuell", "ok") }</td>
+                            <td data-label="Verfahren">@Labels.Method(e.Method)@(e.OcrConfidence is { } c ? $" ({c:0} %)" : "")</td>
+                            <td data-label="Dauer" class="mat-hide-sm">@e.DurationMs ms</td>
+                            <td data-label="Zeit">@Fmt.Moment(e.CreateDate)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Validierungen</caption>
+                <thead><tr><th scope="col">Validierung</th><th scope="col">Fehler</th><th scope="col">Warnungen</th><th scope="col" class="mat-hide-sm">XRechnung</th><th scope="col">Zeit</th></tr></thead>
+                <tbody>
+                    @foreach (var v in Model.Validations)
+                    {
+                        <tr>
+                            <td data-label="Validierung">@Labels.Pill(v.Status)</td>
+                            <td data-label="Fehler" class="mat-num">@v.Errors</td>
+                            <td data-label="Warnungen" class="mat-num">@v.Warnings</td>
+                            <td data-label="XRechnung" class="mat-hide-sm">@(v.XRechnungReady ? "möglich" : "nicht möglich")</td>
+                            <td data-label="Zeit">@Fmt.Moment(v.CreateDate)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </im-tab>
+</im-tabs>

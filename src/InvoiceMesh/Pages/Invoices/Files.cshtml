@@ -1,0 +1,105 @@
+@page
+@model InvoiceMesh.Pages.Invoices.FilesModel
+@{
+    var doc = Model.Doc;
+}
+
+<partial name="_LinkTabs" model="Model.Tabs" />
+
+<div class="mat-table-wrap">
+    <table class="mat-table">
+        <caption class="mat-sr-only">Dateien des Belegs</caption>
+        <thead><tr><th scope="col">Datei</th><th scope="col" class="mat-hide-sm">Art</th><th scope="col" class="mat-hide-sm">Erzeugt</th><th scope="col">Stand</th><th scope="col"><span class="mat-sr-only">Aktionen</span></th></tr></thead>
+        <tbody>
+            <tr>
+                <td data-label="Datei">@Ui.NameWithSub("Originaldatei", null, $"{doc.FileName} · {Fmt.FileSize(doc.SizeBytes)}")</td>
+                <td data-label="Art" class="mat-hide-sm">Original, unverändert</td>
+                <td data-label="Erzeugt" class="mat-hide-sm">@Fmt.Moment(doc.ReceivedDate)</td>
+                <td data-label="Stand">@Ui.Pill("Original", "plain", "lock")</td>
+                <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/files/@doc.Id/original?download=1" aria-label="Herunterladen" data-tip="Herunterladen">@Ui.Icon("download")</a></div></td>
+            </tr>
+            @if (doc.EmbeddedXmlFile is { } xml)
+            {
+                <tr>
+                    <td data-label="Datei">@Ui.NameWithSub("Eingebettetes XML", null, $"{xml.FileName} · {Fmt.FileSize(xml.SizeBytes)}")</td>
+                    <td data-label="Art" class="mat-hide-sm">Aus dem hybriden PDF, unverändert</td>
+                    <td data-label="Erzeugt" class="mat-hide-sm">@Fmt.Moment(xml.CreateDate)</td>
+                    <td data-label="Stand">@Ui.Pill("Original", "plain", "lock")</td>
+                    <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/files/@doc.Id/embedded" aria-label="Herunterladen" data-tip="Herunterladen">@Ui.Icon("download")</a></div></td>
+                </tr>
+            }
+            @if (Model.Ctx.Extraction is not null)
+            {
+                <tr>
+                    <td data-label="Datei">@Ui.NameWithSub("Ausgelesene Daten", null, "Format, Geschäftsbegriffe (ausgelesen und korrigiert), Rohdaten")</td>
+                    <td data-label="Art" class="mat-hide-sm">JSON</td>
+                    <td data-label="Erzeugt" class="mat-hide-sm">@Fmt.Moment(Model.Ctx.Extraction.CreateDate)</td>
+                    <td data-label="Stand">@Ui.Pill("aktuell", "ok")</td>
+                    <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/files/@doc.Id/extracted.json" aria-label="Herunterladen" data-tip="Herunterladen">@Ui.Icon("download")</a></div></td>
+                </tr>
+            }
+            @if (Model.Ctx.Revision is { } rev)
+            {
+                <tr>
+                    <td data-label="Datei">@Ui.NameWithSub("Normalisierte Daten", null, $"Revision {rev.Number}, {Model.Ctx.Report?.SchemaName} v{Model.Ctx.Report?.SchemaVersion}")</td>
+                    <td data-label="Art" class="mat-hide-sm">JSON nach Zielschema (CSV und XML unter Exporte)</td>
+                    <td data-label="Erzeugt" class="mat-hide-sm">@Fmt.Moment(rev.CreateDate)</td>
+                    <td data-label="Stand">@Ui.Pill("aktuell", "ok")</td>
+                    <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/files/@doc.Id/normalized.json" aria-label="Herunterladen" data-tip="Herunterladen">@Ui.Icon("download")</a></div></td>
+                </tr>
+            }
+            @if (Model.Ctx.Validation is { } val)
+            {
+                <tr>
+                    <td data-label="Datei">@Ui.NameWithSub("Validierungsbericht", null, $"{Labels.Of(val.Status)}: {val.Errors} Fehler, {val.Warnings} Warnungen")</td>
+                    <td data-label="Art" class="mat-hide-sm">PDF oder JSON</td>
+                    <td data-label="Erzeugt" class="mat-hide-sm">@Fmt.Moment(val.CreateDate)</td>
+                    <td data-label="Stand">@Ui.Pill("aktuell", "ok")</td>
+                    <td class="mat-table__cell-actions"><div class="mat-table__actions">
+                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/files/@doc.Id/report.pdf" aria-label="PDF herunterladen" data-tip="PDF">@Ui.Icon("file-text")</a>
+                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/files/@doc.Id/report.json" aria-label="JSON herunterladen" data-tip="JSON">@Ui.Icon("file-code")</a>
+                    </div></td>
+                </tr>
+            }
+            @foreach (var f in Model.Ctx.Files)
+            {
+                <tr>
+                    <td data-label="Datei">@Ui.NameWithSub(Labels.Of(f.Kind), f.Kind is GeneratedKind.XRechnungUbl or GeneratedKind.XRechnungCii ? $"/Invoices/Files?id={doc.Id}&show={f.Id}" : null, $"{f.StoredFile?.FileName} · {Fmt.FileSize(f.StoredFile?.SizeBytes ?? 0)}")</td>
+                    <td data-label="Art" class="mat-hide-sm">@(f.Check ?? "erzeugt")</td>
+                    <td data-label="Erzeugt" class="mat-hide-sm">@Fmt.Moment(f.CreateDate)</td>
+                    <td data-label="Stand">@(Model.IsCurrent(f) ? Ui.Pill("aktuell", "ok") : Ui.Pill("ältere Daten", "warn"))</td>
+                    <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/files/generated/@f.Id?download=1" aria-label="Herunterladen" data-tip="Herunterladen">@Ui.Icon("download")</a></div></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.ShownXml is not null && Model.Shown is { } shown)
+{
+    <section class="mat-card" aria-labelledby="xml-title">
+        <div class="mat-card__head">@Ui.Icon("file-code")<h2 class="mat-card__title" id="xml-title">Vorschau: @Labels.Of(shown.Kind)</h2><span class="mat-card__sub">@shown.Check</span></div>
+        <div class="mat-card__body">
+            <pre class="im-code" tabindex="0" aria-label="XML der XRechnung">@Model.ShownXml</pre>
+        </div>
+    </section>
+}
+
+<form method="post" class="mat-form">
+    <div class="mat-btn-row">
+        @if (doc.XRechnungReady)
+        {
+            <button type="submit" asp-page-handler="XRechnung" asp-route-id="@doc.Id" asp-route-syntax="ubl" class="mat-btn mat-btn--primary">@Ui.Icon("file-code")<span>XRechnung (UBL)</span></button>
+            <button type="submit" asp-page-handler="XRechnung" asp-route-id="@doc.Id" asp-route-syntax="cii" class="mat-btn mat-btn--secondary">@Ui.Icon("file-code")<span>XRechnung (CII)</span></button>
+        }
+        @if (doc.CurrentExtractionId is not null)
+        {
+            <button type="submit" asp-page-handler="Pdf" asp-route-id="@doc.Id" class="mat-btn mat-btn--secondary">@Ui.Icon("file-text")<span>PDF-Ansicht erzeugen</span></button>
+        }
+        <a class="mat-btn mat-btn--secondary" href="/Invoices/Details?id=@doc.Id">@Ui.Icon("back")<span>Zurück</span></a>
+    </div>
+</form>
+@if (!doc.XRechnungReady && doc.ProcessingStatus == ProcessingStatus.Processed)
+{
+    <p class="mat-hint">Eine XRechnung ist nicht möglich: es fehlen Angaben oder sie widersprechen sich. Siehe <a href="/Invoices/Validation?id=@doc.Id#xrechnung">Validierung</a>.</p>
+}

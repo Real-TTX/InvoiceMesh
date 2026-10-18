@@ -1,0 +1,78 @@
+@page
+@model InvoiceMesh.Pages.Invoices.CorrectModel
+
+<p class="mat-hint">Leere ein Feld, um einen falsch erkannten Wert zu entfernen. Werte in festen Formaten: Datum als JJJJ-MM-TT, Zahlen mit Punkt (1234.50), Codes wie im Standard (Land DE, Währung EUR, Einheit H87).</p>
+
+<im-tabs id="correct" label="Was korrigiert wird" selected="@Model.Tab">
+    <im-tab id="source" title="Quelldaten (EN 16931)" icon="file-text">
+        <form method="post" asp-page-handler="Source" asp-route-id="@Model.Id" class="mat-form" novalidate>
+            @foreach (var (part, inputs) in Model.Sections)
+            {
+                <im-card title="@part">
+                    <div class="mat-form__grid">
+                        @foreach (var input in inputs) { <partial name="_CorrectInput" model="input" /> }
+                    </div>
+                </im-card>
+            }
+            @foreach (var (group, items) in Model.Groups)
+            {
+                <im-card title="@group.Label" sub="@group.Id">
+                    @for (var i = 0; i < items.Count; i++)
+                    {
+                        <h3 class="mat-h4">@(i < items.Count - 1 ? $"{i + 1}. Eintrag" : "Neuer Eintrag (nur ausfüllen, wenn einer fehlt)")</h3>
+                        <div class="mat-form__grid">
+                            @foreach (var input in items[i]) { <partial name="_CorrectInput" model="input" /> }
+                        </div>
+                    }
+                </im-card>
+            }
+            <im-card title="Begründung" icon="message-square">
+                <div class="mat-form__grid">
+                    <div class="mat-field mat-field--full">
+                        <label class="mat-label" for="reason-source">Warum (für den Verlauf)</label>
+                        <input class="mat-input" id="reason-source" name="Reason" autocomplete="off" placeholder="z. B. Leitweg-ID laut Bestellung ergänzt" />
+                    </div>
+                </div>
+            </im-card>
+            <im-buttons save-text="Korrektur speichern" back-href="@($"/Invoices/Data?id={Model.Id}")" />
+        </form>
+    </im-tab>
+
+    <im-tab id="target" title="Zielschema" icon="layers">
+        @if (Model.Target.Count == 0)
+        {
+            <p class="mat-muted">Der Beleg hat noch keine normalisierten Daten.</p>
+        }
+        else
+        {
+            <p class="mat-hint">Diese Korrekturen gelten nur für das Zielschema „@Model.Ctx.Report?.SchemaName“ und überschreiben das Ergebnis des Mappings. Für Angaben, die in der Rechnung stehen, ist eine Korrektur der Quelldaten besser: sie wirkt auch auf Validierung und XRechnung.</p>
+            <form method="post" asp-page-handler="Target" asp-route-id="@Model.Id" class="mat-form" novalidate>
+                @foreach (var (group, items) in Model.Target)
+                {
+                    <im-card title="@group.Label" sub="@group.Key">
+                        @if (items.Count == 0)
+                        {
+                            <p class="mat-muted">Keine Einträge.</p>
+                        }
+                        @for (var i = 0; i < items.Count; i++)
+                        {
+                            if (group.Repeating) { <h3 class="mat-h4">@(i + 1). Eintrag</h3> }
+                            <div class="mat-form__grid">
+                                @foreach (var input in items[i]) { <partial name="_CorrectInput" model="input" /> }
+                            </div>
+                        }
+                    </im-card>
+                }
+                <im-card title="Begründung" icon="message-square">
+                    <div class="mat-form__grid">
+                        <div class="mat-field mat-field--full">
+                            <label class="mat-label" for="reason-target">Warum (für den Verlauf)</label>
+                            <input class="mat-input" id="reason-target" name="Reason" autocomplete="off" />
+                        </div>
+                    </div>
+                </im-card>
+                <im-buttons save-text="Korrektur speichern" back-href="@($"/Invoices/Data?id={Model.Id}")" />
+            </form>
+        }
+    </im-tab>
+</im-tabs>

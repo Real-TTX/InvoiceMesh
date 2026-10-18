@@ -1,0 +1,178 @@
+@page
+@model InvoiceMesh.Pages.Invoices.DetailsModel
+@{
+    var d = Model.Ctx.Corrected;
+    var doc = Model.Doc;
+    string? V(string id) => d.Get(id);
+}
+
+<partial name="_LinkTabs" model="Model.Tabs" />
+
+@if (Model.IsPending)
+{
+    <div class="mat-alert mat-alert--info" role="status" data-poll-ids="@doc.Id">
+        @Ui.Icon("refresh")
+        <div class="mat-alert__body"><strong>Der Beleg wird verarbeitet.</strong> Die Seite aktualisiert sich, sobald er fertig ist.</div>
+    </div>
+}
+else if (doc.ProcessingStatus == ProcessingStatus.Failed)
+{
+    <div class="mat-alert mat-alert--danger" role="alert">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body"><strong>Die Verarbeitung ist fehlgeschlagen.</strong> @doc.ProcessingError</div>
+    </div>
+}
+else if (Model.SchemaOutdated)
+{
+    <div class="mat-alert mat-alert--warning" role="note">
+        @Ui.Icon("alert")
+        <div class="mat-alert__body"><strong>Ältere Schemaversion.</strong> Die Daten wurden mit @Model.SchemaName normalisiert; inzwischen gilt eine neuere Version. „Neu normalisieren“ erzeugt eine neue Revision, die alte bleibt erhalten.</div>
+    </div>
+}
+
+<div class="im-split im-split--half">
+    <section class="mat-card" aria-labelledby="facts-title">
+        <div class="mat-card__head">@Ui.Icon("file-text")<h2 class="mat-card__title" id="facts-title">Allgemeine Informationen</h2>@Labels.Pill(doc)</div>
+        <div class="mat-card__body">
+            <dl class="mat-kv">
+                <dt>Rechnungsnummer</dt><dd>@(V("BT-1") ?? "–")</dd>
+                <dt>Art</dt><dd>@(V("BT-3") is { } t ? $"{InvoicePdf.TypeLabel(t)} ({t})" : "–")</dd>
+                <dt>Rechnungsdatum</dt><dd>@(d.Date("BT-2") is { } date ? Fmt.Date(date) : "–")</dd>
+                <dt>Fällig</dt><dd>@(d.Date("BT-9") is { } due ? Fmt.Date(due) : "–")</dd>
+                <dt>Lieferant</dt><dd>@(V("BT-27") ?? V("BT-28") ?? "–")@(V("BT-31") is { } vat ? $" · {vat}" : "")</dd>
+                <dt>Empfänger</dt><dd>@(V("BT-44") ?? V("BT-45") ?? "–")@(V("BT-48") is { } bvat ? $" · {bvat}" : "")</dd>
+                <dt>Käuferreferenz</dt><dd>@(V("BT-10") ?? "–")</dd>
+                <dt>Währung</dt><dd>@(V("BT-5") ?? "–")</dd>
+                <dt>Netto</dt><dd>@Ui.Amount(d.Decimal("BT-109"), V("BT-5"))</dd>
+                <dt>Umsatzsteuer</dt><dd>@Ui.Amount(d.Decimal("BT-110"), V("BT-5"))</dd>
+                <dt>Gesamtbetrag</dt><dd><strong>@Ui.Amount(d.Decimal("BT-112"), V("BT-5"))</strong></dd>
+                <dt>Positionen</dt><dd>@d.Items(InvoiceMesh.Core.Semantics.SemanticCatalog.Lines).Count</dd>
+            </dl>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="steps-title">
+        <div class="mat-card__head">@Ui.Icon("route")<h2 class="mat-card__title" id="steps-title">Verarbeitungsstatus</h2>@Labels.Pill(doc.ProcessingStatus)</div>
+        <div class="mat-card__body">
+            <ul class="im-steps-list">
+                @foreach (var s in Model.Steps)
+                {
+                    <li class="im-step is-@s.Tone">
+                        @Ui.Icon(s.Icon, "im-step__icon")
+                        <span>@if (s.Href is not null) { <a href="@s.Href">@s.Title</a> } else { @s.Title }</span>
+                        <span class="im-step__end">@s.Result</span>
+                    </li>
+                }
+            </ul>
+            <p class="mat-hint">Verarbeitung und Validierung werden getrennt ausgewiesen: ein Beleg kann fehlerfrei verarbeitet und trotzdem ungültig sein.</p>
+            @if (doc.ReviewedDate is { } reviewed)
+            {
+                <p class="mat-hint">@Ui.Icon("check")Geprüft am @Fmt.Moment(reviewed).</p>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="im-split im-split--half">
+    <section class="mat-card" aria-labelledby="files-title">
+        <div class="mat-card__head">@Ui.Icon("paperclip")<h2 class="mat-card__title" id="files-title">Zugehörige Dateien</h2><a class="mat-card__sub" href="/Invoices/Files?id=@doc.Id">Alle Dateien</a></div>
+        <div class="mat-card__body">
+            <ul class="im-notes">
+                <li class="im-note">
+                    @Ui.Icon("file", "im-note__icon im-note__icon--info")
+                    <div class="im-note__body"><a class="im-note__title" href="/files/@doc.Id/original?download=1">Originaldatei</a><span class="im-note__meta">@doc.FileName · @Fmt.FileSize(doc.SizeBytes) · unverändert</span></div>
+                </li>
+                @if (doc.EmbeddedXmlFile is { } xml)
+                {
+                    <li class="im-note">
+                        @Ui.Icon("file-code", "im-note__icon im-note__icon--info")
+                        <div class="im-note__body"><a class="im-note__title" href="/files/@doc.Id/embedded">Eingebettetes XML</a><span class="im-note__meta">@xml.FileName · @Fmt.FileSize(xml.SizeBytes)</span></div>
+                    </li>
+                }
+                @foreach (var f in Model.Ctx.Files.Take(4))
+                {
+                    <li class="im-note">
+                        @Ui.Icon(f.Kind == GeneratedKind.Pdf ? "file-text" : "file-code", "im-note__icon im-note__icon--ok")
+                        <div class="im-note__body"><a class="im-note__title" href="/files/generated/@f.Id?download=1">@Labels.Of(f.Kind)</a><span class="im-note__meta">@f.StoredFile?.FileName · @Fmt.Moment(f.CreateDate)@(f.Check is null ? "" : " · " + f.Check)</span></div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="hint-title">
+        <div class="mat-card__head">@Ui.Icon("info")<h2 class="mat-card__title" id="hint-title">Hinweise</h2></div>
+        <div class="mat-card__body">
+            @{
+                var errors = Model.Ctx.ValidationReport?.Findings.Where(f => f.Severity == InvoiceMesh.Core.Validation.Severity.Error).Take(4).ToList() ?? [];
+                var unsure = Model.Ctx.Corrected.Uncertain().Count();
+            }
+            @if (errors.Count == 0 && unsure == 0 && Model.Ctx.XRechnungMissing.Count == 0)
+            {
+                <p class="mat-muted">Nichts Besonderes: die Daten sind vollständig und stimmen.</p>
+            }
+            <ul class="im-notes">
+                @foreach (var e in errors)
+                {
+                    <li class="im-note">@Ui.Icon("x-circle", "im-note__icon im-note__icon--error")<div class="im-note__body"><span class="im-note__title">@e.RuleId</span><span class="im-note__meta">@e.Message</span></div></li>
+                }
+                @if (unsure > 0)
+                {
+                    <li class="im-note">@Ui.Icon("alert", "im-note__icon im-note__icon--warn")<div class="im-note__body"><a class="im-note__title" href="/Invoices/Data?id=@doc.Id">@Ui.CountNoun(unsure, "Werte") unsicher erkannt</a><span class="im-note__meta">Aus Text gelesen. Prüfe sie im Vergleich und korrigiere, was nicht stimmt.</span></div></li>
+                }
+                @if (!doc.XRechnungReady && Model.Ctx.XRechnungMissing.Count > 0 && doc.ProcessingStatus == ProcessingStatus.Processed)
+                {
+                    <li class="im-note">@Ui.Icon("info", "im-note__icon im-note__icon--info")<div class="im-note__body"><a class="im-note__title" href="/Invoices/Validation?id=@doc.Id#xrechnung">Für eine XRechnung fehlt etwas</a><span class="im-note__meta">@string.Join(", ", Model.Ctx.XRechnungMissing.Take(4).Select(m => m.RuleId))@(Model.Ctx.XRechnungMissing.Count > 4 ? " …" : "")</span></div></li>
+                }
+            </ul>
+        </div>
+    </section>
+</div>
+
+@if (!Model.IsPending)
+{
+    <form method="post" class="mat-form">
+        <div class="mat-btn-row">
+            @if (doc.XRechnungReady)
+            {
+                <button type="submit" asp-page-handler="XRechnung" asp-route-id="@doc.Id" class="mat-btn mat-btn--primary">@Ui.Icon("file-code")<span>XRechnung erzeugen</span></button>
+            }
+            @if (doc.CurrentExtractionId is not null)
+            {
+                <a class="mat-btn @(doc.XRechnungReady ? "mat-btn--secondary" : "mat-btn--primary")" href="/Invoices/Correct?id=@doc.Id">@Ui.Icon("edit")<span>Korrigieren</span></a>
+            }
+            @if (doc.NeedsReview && doc.ReviewedDate is null && doc.ProcessingStatus == ProcessingStatus.Processed)
+            {
+                <button type="submit" asp-page-handler="Reviewed" asp-route-id="@doc.Id" class="mat-btn mat-btn--secondary">@Ui.Icon("check")<span>Als geprüft markieren</span></button>
+            }
+            <a class="mat-btn mat-btn--secondary" href="/Invoices/Share?id=@doc.Id">@Ui.Icon("share")<span>Freigeben</span></a>
+            <button type="submit" asp-page-handler="Reprocess" asp-route-id="@doc.Id" class="mat-btn mat-btn--secondary" data-confirm="Die Originaldatei neu auslesen? Korrekturen bleiben erhalten und werden neu angewendet." data-confirm-ok="Neu verarbeiten">@Ui.Icon("refresh")<span>Neu verarbeiten</span></button>
+            <a class="mat-btn mat-btn--secondary" href="/Invoices">@Ui.Icon("back")<span>Zurück</span></a>
+            <span class="mat-btn-row__spacer"></span>
+            <button type="submit" asp-page-handler="Delete" asp-route-id="@doc.Id" class="mat-btn mat-btn--danger" data-confirm="Diesen Beleg aus den Listen entfernen? Original und Verlauf bleiben gespeichert." data-confirm-ok="Löschen">@Ui.Icon("trash")<span>Löschen</span></button>
+        </div>
+    </form>
+
+    @if (doc.CurrentExtractionId is not null)
+    {
+        <form method="post" asp-page-handler="Renormalize" asp-route-id="@doc.Id" class="mat-form">
+            <im-card title="Neu normalisieren" icon="layers">
+                <p class="mat-hint">Erzeugt die normalisierten Daten neu, mit der aktiven Version des gewählten Schemas und dem passenden Mapping. Frühere Revisionen bleiben im Verlauf.</p>
+                <div class="mat-form__grid">
+                    <div class="mat-field">
+                        <label class="mat-label" for="schemaId">Zielschema</label>
+                        <select class="mat-select" id="schemaId" name="schemaId">
+                            @foreach (var s in Model.Schemas)
+                            {
+                                <option value="@s.Id" selected="@(Model.Ctx.Report?.TargetSchemaId == s.Id)">@s.Name@(s.IsDefault ? " (Standard)" : "")</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="mat-btn-row">
+                    <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("refresh")<span>Neu normalisieren</span></button>
+                </div>
+            </im-card>
+        </form>
+    }
+}

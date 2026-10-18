@@ -1,0 +1,41 @@
+@model InvoiceMesh.Pages.Invoices.DataModel.TermRow
+@*
+    One business term in the comparison: the value as read (with confidence and source), and, when a person corrected it, the value that counts now.
+*@
+@{
+    var r = Model;
+    var unsure = r.Current is { Confidence: < InvoiceMesh.Core.Semantics.Confidence.High };
+}
+<tr class="@(unsure ? "is-uncertain" : "")">
+    <td data-label="Begriff">@Ui.NameWithSub(r.Label, null, r.Key)</td>
+    <td data-label="Ausgelesen">
+        @if (r.Extracted is { } e)
+        {
+            <span class="@(r.Correction is not null ? "im-was" : "") im-break">@e.Value</span>
+            @if (e.Confidence < InvoiceMesh.Core.Semantics.Confidence.High)
+            {
+                <span class="im-unsure">@Ui.Icon("alert")@Labels.Of(e.Confidence)</span>
+            }
+        }
+        else
+        {
+            <span class="im-value-missing">nicht gefunden</span>
+        }
+    </td>
+    <td data-label="Aktuell">
+        @if (r.Correction is { } c)
+        {
+            <span class="im-break">@(c.Value ?? "(geleert)")</span>
+            <span class="im-corrected">@Ui.Icon("edit")korrigiert von @c.UserName</span>
+        }
+        else if (r.Current is { } cur)
+        {
+            <span class="im-break">@cur.Value</span>
+        }
+        else
+        {
+            <span class="mat-muted">–</span>
+        }
+    </td>
+    <td data-label="Quelle" class="mat-hide-sm"><span class="im-source">@(r.Correction is not null ? r.Extracted?.Source : r.Current?.Source)</span></td>
+</tr>

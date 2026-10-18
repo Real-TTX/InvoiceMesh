@@ -1,0 +1,76 @@
+# InvoiceMesh - development stack: builds the image from the source in this folder.
+#   ./scripts/redeploy.ps1            (rebuilds the container and redeploys the stack)
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Web:      http://localhost:2308
+# pgAdmin:  http://localhost:2318   (admin@invoicemesh.example.com / invoicemesh; server "db", user postgres, password invoicemesh)
+# Postgres: localhost:12308         (for tests and tools)
+name: invoicemesh-dev
+
+services:
+  invoicemesh:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        Channel: ${INVOICEMESH_CHANNEL:-local}
+        BuildNumber: ${INVOICEMESH_BUILD_NUMBER:-0}
+        BuildDate: ${INVOICEMESH_BUILD_DATE:-}
+    image: invoicemesh:dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "2308:2308"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      TZ: Europe/Berlin
+    volumes:
+      - invoicemesh-data:/data
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: invoicemesh
+      POSTGRES_DB: invoicemesh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d invoicemesh"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      # Only for local tests and tools.
+      - "12308:5432"
+    volumes:
+      - invoicemesh-db:/var/lib/postgresql/data
+
+  # Database UI of the development stack. Add the server "db" (user postgres, password invoicemesh).
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@invoicemesh.example.com
+      PGADMIN_DEFAULT_PASSWORD: invoicemesh
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "2318:80"
+    depends_on:
+      - db
+    volumes:
+      - invoicemesh-pgadmin:/var/lib/pgadmin
+
+# An explicit subnet: on a PC with many stacks Docker runs out of its default address pools ("all predefined address pools
+# have been fully subnetted"). Override with INVOICEMESH_DEV_SUBNET if this range collides with something.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${INVOICEMESH_DEV_SUBNET:-10.253.38.0/24}
+
+volumes:
+  invoicemesh-data:
+  invoicemesh-db:
+  invoicemesh-pgadmin:

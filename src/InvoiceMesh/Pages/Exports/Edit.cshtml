@@ -1,0 +1,52 @@
+@page
+@model InvoiceMesh.Pages.Exports.EditModel
+
+<form class="mat-form" method="post" novalidate>
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <im-summary />
+    <im-card title="Export" icon="download">
+        <div class="mat-form__grid">
+            <im-input for="Input.Name" label="Name" required="true" autocomplete="off" />
+            <im-select for="Input.TargetSchemaId" label="Zielschema" items="Model.Schemas" hint="Nach dem Wechsel speichern, damit Gruppen und Felder des Schemas zur Wahl stehen." />
+            <im-radios for="Input.Format" label="Format" items="EditModel.Formats" />
+            <im-textarea for="Input.Description" label="Beschreibung" rows="2" full="true" />
+        </div>
+    </im-card>
+    <im-card title="Inhalt" icon="layers">
+        <div class="mat-form__grid">
+            <im-picker for="Input.Groups" label="Gruppen" items="Model.GroupItems" multiple="true" placeholder="Alle Gruppen" hint="Leer: alle Gruppen des Schemas." />
+            <im-picker for="Input.Exclude" label="Ohne diese Felder" items="Model.FieldItems" multiple="true" placeholder="Keine" />
+        </div>
+    </im-card>
+    <im-card title="CSV" icon="table" show-if="Input.Format" show-value="Csv">
+        <div class="mat-form__grid">
+            <im-select for="Input.CsvLayout" label="Zeilen" items="EditModel.Layouts" />
+            <im-select for="Input.RowGroup" label="Liste der Zeilen" items="Model.RepeatingItems" empty="– wählen –" show-if="Input.CsvLayout" show-value="ItemPerRow" />
+            <im-select for="Input.CsvDelimiter" label="Trennzeichen" items="EditModel.Delimiters" />
+            <im-select for="Input.CsvDecimalSeparator" label="Dezimaltrennzeichen" items="EditModel.Decimals" />
+            <im-switch for="Input.CsvLabels" label="Spaltenköpfe mit Bezeichnungen statt Schlüsseln" />
+        </div>
+    </im-card>
+    <im-card title="XML" icon="file-code" show-if="Input.Format" show-value="Xml">
+        <div class="mat-form__grid">
+            <im-input for="Input.XmlRoot" label="Wurzelelement" autocomplete="off" />
+            <im-input for="Input.XmlInvoice" label="Element je Beleg" autocomplete="off" />
+            <im-input for="Input.XmlItem" label="Element je Listeneintrag" autocomplete="off" />
+        </div>
+    </im-card>
+    <im-card title="JSON" icon="file-code" show-if="Input.Format" show-value="Json">
+        <div class="mat-form__grid">
+            <im-switch for="Input.JsonIndented" label="Eingerückt (lesbar)" />
+        </div>
+    </im-card>
+    @if (Model.Profile is null)
+    {
+        <im-buttons back-href="/Exports" />
+    }
+    else
+    {
+        <im-buttons back-href="/Exports" delete-url="@Url.Page("/Exports/Edit", "Delete", new { id = Model.Id })" delete-confirm="Diesen Export löschen?">
+            <a class="mat-btn mat-btn--secondary" href="/Exports/Run?id=@Model.Id">@Ui.Icon("download")<span>Ausführen</span></a>
+        </im-buttons>
+    }
+</form>
