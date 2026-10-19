@@ -63,17 +63,20 @@ That correction is stored next to the original, which is never touched.
 
 **Checking and output**
 - **Validation:**
+  - **Structure** of UBL and CII against the official **XML schemas** (UBL 2.1, CII D16B): element names, order,
+    cardinalities, data types.
   - **EN 16931**: mandatory fields, totals BR-CO-10…16, taxes, code lists.
   - **XRechnung** (BR-DE) and **Peppol BIS**.
   - Plausibility checks and your own schema's rules.
 - **Processing and validation are kept apart.** An invoice can be processed without a hitch and still be invalid.
 - **XRechnung 3.0 (UBL or CII):**
   - Written from complete data and independent of your schema.
-  - Read back after writing to confirm it.
+  - Read back after writing and checked against the XML schema and the rules.
   - Checked in CI with the **official KoSIT validator**.
 - **Other output:**
   - A **readable PDF** when there is no original PDF.
   - The **validation report** as PDF and JSON.
+  - Every output can be **previewed** next to the list of files: PDFs in the page, XML and JSON as text.
 - **Exports** as **JSON, CSV or XML**, configurable: groups, fields, one row per invoice or per line, separators,
   element names.
 - **Manual corrections:**
@@ -415,7 +418,8 @@ cd tests/e2e; npm install; node flow.js http://localhost:2308    # browser run w
   - plain JavaScript with no framework and no build step;
   - a strict CSP without inline scripts.
 - **Libraries:**
-  - its own readers and writers for UBL and CII;
+  - its own readers and writers for UBL and CII, checked against the official XML schemas (embedded, from the KoSIT
+    configuration);
   - **PdfPig** for reading PDFs;
   - **Tesseract** and **Poppler** for scans;
   - **QuestPDF** for writing PDFs (community licence: free below USD 1 M annual revenue);

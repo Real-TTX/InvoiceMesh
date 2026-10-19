@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The official XML schemas of UBL 2.1 and CII D16B (see Xsd/README.md), named by their path so that imports resolve: xsd/ubl/common/... -->
+    <EmbeddedResource Include="Xsd\**\*.xsd" LogicalName="xsd/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="InvoiceMesh.Tests" />
   </ItemGroup>
 

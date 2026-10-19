@@ -270,27 +270,21 @@ app.MapGet("/files/generated/{fileId:long}", async (long fileId, HttpContext htt
 app.MapGet("/files/{id:long}/normalized.json", async (long id, InvoiceService invoices) =>
 {
     var ctx = await invoices.LoadAsync(id);
-    return ctx?.Data is null ? Results.NotFound() : Results.File(Encoding.UTF8.GetBytes(ctx.Data.ToJsonString(CoreJson.Indented)), "application/json", $"{InvoiceService.SafeStem(ctx.Doc)}.normalisiert.json");
+    return ctx?.NormalizedJson() is { } json ? Results.File(Encoding.UTF8.GetBytes(json), "application/json", $"{InvoiceService.SafeStem(ctx.Doc)}.normalisiert.json") : Results.NotFound();
 });
 
 // The extracted data (format, semantic model as read and as corrected, raw fields) as JSON: the source side of the comparison.
 app.MapGet("/files/{id:long}/extracted.json", async (long id, InvoiceService invoices) =>
 {
     var ctx = await invoices.LoadAsync(id);
-    if (ctx?.Extraction is null)
-    {
-        return Results.NotFound();
-    }
-
-    var payload = new { format = ctx.Format, method = ctx.Extraction.Method, extracted = ctx.Extracted, corrected = ctx.Corrected, corrections = ctx.Corrections.Select(c => new { c.Scope, c.Key, c.Value, c.PreviousValue, c.Reason, c.Reverted, c.UserName, c.CreateDate }), messages = ctx.Messages, rawFields = ctx.Raw };
-    return Results.File(Encoding.UTF8.GetBytes(CoreJson.Serialize(payload, indented: true)), "application/json", $"{InvoiceService.SafeStem(ctx.Doc)}.ausgelesen.json");
+    return ctx?.ExtractedJson() is { } json ? Results.File(Encoding.UTF8.GetBytes(json), "application/json", $"{InvoiceService.SafeStem(ctx.Doc)}.ausgelesen.json") : Results.NotFound();
 });
 
-// The validation report as JSON or PDF.
-app.MapGet("/files/{id:long}/report.{format}", async (long id, string format, InvoiceService invoices) =>
+// The validation report as JSON or PDF. The PDF is shown in the page (the preview of the files) unless ?download asks for the file.
+app.MapGet("/files/{id:long}/report.{format}", async (long id, string format, HttpContext http, InvoiceService invoices) =>
 {
     var ctx = await invoices.LoadAsync(id);
-    if (ctx?.ValidationReport is null)
+    if (ctx?.ReportJson() is not { } json)
     {
         return Results.NotFound();
     }
@@ -298,8 +292,8 @@ app.MapGet("/files/{id:long}/report.{format}", async (long id, string format, In
     var stem = InvoiceService.SafeStem(ctx.Doc) + ".validierung";
     return format switch
     {
-        "json" => Results.File(Encoding.UTF8.GetBytes(CoreJson.Serialize(new { status = ctx.Validation!.Status, ctx.ValidationReport.Errors, ctx.ValidationReport.Warnings, ctx.ValidationReport.Infos, xrechnungReady = ctx.Validation.XRechnungReady, xrechnungMissing = ctx.XRechnungMissing, checks = ctx.ValidationReport.Checks, findings = ctx.ValidationReport.Findings }, indented: true)), "application/json", stem + ".json"),
-        "pdf" => Results.File(await invoices.ValidationReportPdfAsync(ctx.Doc), "application/pdf", stem + ".pdf"),
+        "json" => Results.File(Encoding.UTF8.GetBytes(json), "application/json", stem + ".json"),
+        "pdf" => FileResults.Pdf(http, await invoices.ValidationReportPdfAsync(ctx.Doc), stem + ".pdf"),
         _ => Results.NotFound(),
     };
 });
@@ -352,6 +346,15 @@ public static class FileResults
         // A PDF viewer does not run in a sandboxed document; every other type gets the sandbox as well.
         http.Response.Headers.ContentSecurityPolicy = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; object-src 'self'" + (kind == InvoiceMesh.Core.Formats.FileKind.Pdf ? "" : "; sandbox");
         return Results.File(bytes, inline ? mediaType : kind == InvoiceMesh.Core.Formats.FileKind.Xml ? "application/xml" : "application/octet-stream", inline ? null : name);
+    }
+
+    /// <summary>A PDF InvoiceMesh made on request (the validation report): shown inline, as a file with ?download.</summary>
+    public static IResult Pdf(HttpContext http, byte[] bytes, string name)
+    {
+        var download = http.Request.Query.ContainsKey("download");
+        http.Response.Headers.CacheControl = "private, no-store";
+        http.Response.Headers.ContentSecurityPolicy = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; object-src 'self'";
+        return Results.File(bytes, "application/pdf", download ? name : null);
     }
 }
 

@@ -97,6 +97,34 @@ public sealed class InvoiceContext
             .Select(g => g.OrderByDescending(c => c.Id).First())
             .Where(c => !c.Reverted);
 
+    /// <summary>The normalized data of the current revision, in the user's schema (null before the first normalization).</summary>
+    public string? NormalizedJson() => Data?.ToJsonString(CoreJson.Indented);
+
+    /// <summary>The extracted data: format, the semantic model as read and as corrected, the corrections, the messages and the raw fields (null before the reading).</summary>
+    public string? ExtractedJson() => Extraction is null ? null : CoreJson.Serialize(new
+    {
+        format = Format,
+        method = Extraction.Method,
+        extracted = Extracted,
+        corrected = Corrected,
+        corrections = Corrections.Select(c => new { c.Scope, c.Key, c.Value, c.PreviousValue, c.Reason, c.Reverted, c.UserName, c.CreateDate }),
+        messages = Messages,
+        rawFields = Raw,
+    }, indented: true);
+
+    /// <summary>The validation report: status, counts, whether an XRechnung can be made, the checks and the findings (null before the validation).</summary>
+    public string? ReportJson() => ValidationReport is null || Validation is null ? null : CoreJson.Serialize(new
+    {
+        status = Validation.Status,
+        ValidationReport.Errors,
+        ValidationReport.Warnings,
+        ValidationReport.Infos,
+        xrechnungReady = Validation.XRechnungReady,
+        xrechnungMissing = XRechnungMissing,
+        checks = ValidationReport.Checks,
+        findings = ValidationReport.Findings,
+    }, indented: true);
+
     public static ExtractionResultParts Parse(InvoiceExtraction e) => new(
         CoreJson.Deserialize<DetectedFormat>(e.FormatJson),
         CoreJson.Deserialize<List<SourceField>>(e.SourceFieldsJson),

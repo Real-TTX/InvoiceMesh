@@ -103,7 +103,7 @@ tr.is-problem > td:first-child { box-shadow: inset 3px 0 0 var(--mat-danger); }
 .im-step.is-ok .im-step__icon { color: var(--mat-success-text); }
 .im-step.is-warn .im-step__icon { color: var(--mat-warning-text); }
 .im-step.is-error .im-step__icon { color: var(--mat-danger-text); }
-.im-step__end { font-size: var(--mat-fs-sm); color: var(--mat-text-muted); text-align: right; }
+.im-step__end { font-size: var(--mat-fs-sm); color: var(--mat-text-muted); text-align: right; white-space: nowrap; }
 
 /* ---- Code (XML, JSON, text of a scan) ---- */
 .im-code { margin: 0; max-height: 34rem; overflow: auto; padding: var(--mat-space-3) var(--mat-space-4); background: var(--mat-surface-2); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); font-family: var(--mat-mono); font-size: 12.5px; line-height: 1.55; white-space: pre; tab-size: 2; }

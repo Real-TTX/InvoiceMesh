@@ -12,3 +12,6 @@
 *.zip binary
 *.kkbak binary
 *.woff2 binary
+
+# The official XML schemas stay byte for byte as published (see src/InvoiceMesh.Core/Xsd/README.md).
+src/InvoiceMesh.Core/Xsd/**/*.xsd -text

@@ -100,6 +100,23 @@ public sealed class PagesTests : IClassFixture<AppFixture>
             Assert.True(file.StatusCode == HttpStatusCode.OK, $"{url} answered {(int)file.StatusCode}");
             Assert.Equal(type, file.Content.Headers.ContentType?.MediaType);
         }
+
+        // the report as a PDF is shown in the page, and is a file with ?download
+        Assert.Null((await client.GetAsync($"/files/{doc}/report.pdf")).Content.Headers.ContentDisposition);
+        Assert.Equal("attachment", (await client.GetAsync($"/files/{doc}/report.pdf?download=1")).Content.Headers.ContentDisposition?.DispositionType);
+
+        // the preview of the files: the XRechnung without a choice, the JSON of the normalized data, the report in a frame; an unknown choice shows nothing
+        Assert.Contains("CustomizationID", await AppFixture.TextAsync(client, $"/Invoices/Files?id={doc}"));
+        var normalized = await AppFixture.TextAsync(client, $"/Invoices/Files?id={doc}&show=normalized");
+        Assert.Contains("Vorschau: Normalisierte Daten", normalized);
+        Assert.Contains("RE-2026-0815", normalized);
+        Assert.Contains($"src=\"/files/{doc}/report.pdf\"", await AppFixture.TextAsync(client, $"/Invoices/Files?id={doc}&show=report"));
+        Assert.DoesNotContain("Vorschau:", await AppFixture.TextAsync(client, $"/Invoices/Files?id={doc}&show=g999999"));
+
+        // the structure was checked against the XML schema, and the report says so
+        var validation = await AppFixture.TextAsync(client, $"/Invoices/Validation?id={doc}");
+        Assert.Contains("Struktur (XSD)", validation);
+        Assert.Contains("UBL 2.1", validation);
     }
 
     [DatabaseFact]

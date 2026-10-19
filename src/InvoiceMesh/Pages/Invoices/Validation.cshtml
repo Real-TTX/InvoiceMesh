@@ -78,7 +78,7 @@ else
                             <li class="im-step @(!c.Performed ? "" : count > 0 ? "is-error" : "is-ok")">
                                 @Ui.Icon(!c.Performed ? "minus" : count > 0 ? "x-circle" : "check-circle", "im-step__icon")
                                 <span>@ValidationReport.ScopeLabel(c.Scope)<small class="im-sub mat-muted">@c.Title@(c.Performed ? "" : " · nicht geprüft: " + c.Reason)</small></span>
-                                <span class="im-step__end">@(c.Performed ? $"{c.RuleCount} Regeln" : "–")</span>
+                                <span class="im-step__end">@(c.Performed ? Ui.CountNoun(c.RuleCount, c.Scope == CheckScope.Structure ? "Schemas" : "Regeln") : "–")</span>
                             </li>
                         }
                     </ul>
@@ -114,7 +114,7 @@ else
     </div>
 
     <div class="mat-btn-row">
-        <a class="mat-btn mat-btn--primary" href="/files/@Model.Id/report.pdf">@Ui.Icon("download")<span>Bericht (PDF)</span></a>
+        <a class="mat-btn mat-btn--primary" href="/files/@Model.Id/report.pdf?download=1">@Ui.Icon("download")<span>Bericht (PDF)</span></a>
         <a class="mat-btn mat-btn--secondary" href="/files/@Model.Id/report.json">@Ui.Icon("download")<span>Bericht (JSON)</span></a>
         <a class="mat-btn mat-btn--secondary" href="/Invoices/Correct?id=@Model.Id">@Ui.Icon("edit")<span>Korrigieren</span></a>
         <a class="mat-btn mat-btn--secondary" href="/Invoices/Details?id=@Model.Id">@Ui.Icon("back")<span>Zurück</span></a>

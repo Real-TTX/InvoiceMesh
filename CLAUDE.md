@@ -31,6 +31,8 @@ The NAS tests need Samba on 445 (`INVOICEMESH_TEST_SMB`, the CI starts one). On 
 - `src/InvoiceMesh.Core` (no web types, all unit tested):
   - `Semantics/` the semantic model of EN 16931 (`SemanticDocument`: business terms `BT-n` and items of `BG-25/23/20/21`, every value with confidence and source)
     and **`SemanticCatalog`, the one table of the bindings to UBL and CII** (paths of `Xml/XPathLite`).
+    `Xml/XmlSchemas` checks UBL 2.1 / CII D16B against the official XSDs in `Xsd/` (embedded, unchanged from the KoSIT configuration): the reader writes
+    the result as messages `XSD` / `XSD-VALID`, the validation shows them as scope `Structure`; errors only where the specification requires that schema.
   - `Formats/` `DetectedFormat` (kind, syntax, standard, profile, version, evidence), `SpecificationRegistry` (BT-24 identifiers; custom ones come from config).
   - `Extraction/` `InvoiceReader` (order: XML, XML inside a PDF, PDF text, OCR through `IOcrEngine`), `XmlInvoiceReader` (raw fields with indexes + semantic),
     `PdfContent` (attachments, text lines by position), `TextInvoiceExtractor` (multilingual labels, `TextValues` for amounts/dates/IBAN/VAT ids).

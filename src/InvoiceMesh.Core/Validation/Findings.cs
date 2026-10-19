@@ -7,10 +7,11 @@ public enum Severity
     Error,
 }
 
-/// <summary>Where a check comes from: the file, the reading, a standard, the user's schema, the mapping, or plain common sense.</summary>
+/// <summary>Where a check comes from: the file, its structure against the XML schema, the reading, a standard, the user's schema, the mapping, or plain common sense.</summary>
 public enum CheckScope
 {
     Format,
+    Structure,
     Extraction,
     Content,
     En16931,
@@ -54,6 +55,7 @@ public sealed class ValidationReport
     public static string ScopeLabel(CheckScope scope) => scope switch
     {
         CheckScope.Format => "Format",
+        CheckScope.Structure => "Struktur (XSD)",
         CheckScope.Extraction => "Auslesen",
         CheckScope.Content => "Rechnungsinhalt",
         CheckScope.En16931 => "EN 16931",

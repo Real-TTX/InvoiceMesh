@@ -10,6 +10,7 @@ using InvoiceMesh.Core.Mapping;
 using InvoiceMesh.Core.Output;
 using InvoiceMesh.Core.Semantics;
 using InvoiceMesh.Core.Validation;
+using InvoiceMesh.Core.Xml;
 using InvoiceMesh.Data;
 using InvoiceMesh.Data.Entities;
 using InvoiceMesh.Services.Processing;
@@ -273,6 +274,20 @@ public sealed class InvoiceService(
 
     private static string? Cut(string? s, int max) => s is null ? null : s.Length > max ? s[..max] : s;
 
+    /// <summary>The check of the structure against the XML schema, as the reading did it (or why it did not).</summary>
+    private static CheckRun StructureCheck(DetectedFormat format, IReadOnlyList<ExtractionMessage> messages)
+    {
+        var schema = format.Syntax switch { InvoiceSyntax.Ubl => XmlSchemas.UblSchema, InvoiceSyntax.Cii => XmlSchemas.CiiSchema, _ => null };
+        if (schema is null)
+        {
+            return new CheckRun(CheckScope.Structure, "Gegen das offizielle XML-Schema", 0, false, format.Kind is FileKind.Xml || format.IsHybrid ? "Für dieses XML gibt es kein Schema in InvoiceMesh." : "Der Beleg enthält kein XML.");
+        }
+
+        return messages.Any(m => m.Code is InvoiceReader.Xsd or InvoiceReader.XsdValid)
+            ? new CheckRun(CheckScope.Structure, $"Gegen das XML-Schema {schema}: Elemente, Reihenfolge, Anzahl, Datentypen", 1, true)
+            : new CheckRun(CheckScope.Structure, $"Gegen das XML-Schema {schema}: Elemente, Reihenfolge, Anzahl, Datentypen", 0, false, "Der Beleg wurde vor dieser Prüfung ausgelesen. „Neu verarbeiten“ holt sie nach.");
+    }
+
     /// <summary>
     /// Validates a document: the format and the reading, the business rules of its standard on the corrected semantic model, the target schema (types,
     /// required fields) and the mapping (conflicts); and whether an XRechnung can be made.
@@ -285,9 +300,12 @@ public sealed class InvoiceService(
         var report = new ValidationReport();
 
         report.Checks.Add(new CheckRun(CheckScope.Format, "Dateityp, Syntax, Standard, Profil und Version erkennen", 1, true));
-        foreach (var m in parts.Messages)
+        report.Checks.Add(StructureCheck(parts.Format, parts.Messages));
+        foreach (var m in parts.Messages.Where(m => m.Code != InvoiceReader.XsdValid))
         {
-            var scope = m.Code.StartsWith("FORMAT", StringComparison.Ordinal) || m.Code.StartsWith("XML", StringComparison.Ordinal) || m.Code.StartsWith("PDF", StringComparison.Ordinal) ? CheckScope.Format : CheckScope.Extraction;
+            var scope = m.Code == InvoiceReader.Xsd ? CheckScope.Structure
+                : m.Code.StartsWith("FORMAT", StringComparison.Ordinal) || m.Code.StartsWith("XML", StringComparison.Ordinal) || m.Code.StartsWith("PDF", StringComparison.Ordinal) ? CheckScope.Format
+                : CheckScope.Extraction;
             report.Findings.Add(new Finding(m.Code, m.Severity switch { MessageSeverity.Error => Severity.Error, MessageSeverity.Warning => Severity.Warning, _ => Severity.Info }, scope, m.Text));
         }
 
@@ -400,19 +418,19 @@ public sealed class InvoiceService(
         };
         var xml = XRechnungWriter.Write(context.Corrected, chosen);
 
-        // The check after the writing: the file is read like any incoming invoice and validated against EN 16931 and XRechnung.
+        // The check after the writing: the file is read like any incoming invoice (with the check against the XML schema) and validated against EN 16931 and XRechnung.
         var back = await new InvoiceReader(specs.Registry).ReadAsync(xml, "xrechnung.xml", ct);
         var (findings, _) = SemanticValidator.Validate(back.Semantic, new ValidationOptions(RuleSets.En16931 | RuleSets.XRechnung, true, Today, config.Current.Processing.Tolerance));
         var errors = findings.Count(f => f.Severity == Severity.Error) + back.Messages.Count(m => m.Severity == MessageSeverity.Error);
         var warnings = findings.Count(f => f.Severity == Severity.Warning);
         if (errors > 0)
         {
-            throw new InvoiceException($"Die erzeugte XRechnung besteht die eigene Prüfung nicht ({errors} Fehler): {findings.FirstOrDefault(f => f.Severity == Severity.Error)?.Message}");
+            throw new InvoiceException($"Die erzeugte XRechnung besteht die eigene Prüfung nicht ({errors} Fehler): {back.Messages.FirstOrDefault(m => m.Severity == MessageSeverity.Error)?.Text ?? findings.FirstOrDefault(f => f.Severity == Severity.Error)?.Message}");
         }
 
         var name = $"{SafeStem(doc)}.xrechnung-{(chosen == InvoiceSyntax.Cii ? "cii" : "ubl")}.xml";
         var file = await AddFileAsync(doc, chosen == InvoiceSyntax.Cii ? GeneratedKind.XRechnungCii : GeneratedKind.XRechnungUbl, xml, name, "application/xml", context,
-            $"XRechnung 3.0 ({(chosen == InvoiceSyntax.Cii ? "CII" : "UBL")}), gegengeprüft: 0 Fehler, {warnings} Warnungen", ct);
+            $"XRechnung 3.0 ({(chosen == InvoiceSyntax.Cii ? "CII" : "UBL")}), gegengeprüft (XML-Schema und Regeln): 0 Fehler, {warnings} Warnungen", ct);
         await EventAsync(doc, "XRechnung erzeugt", $"{name} ({(chosen == InvoiceSyntax.Cii ? "CII" : "UBL")}).", ct);
         return file;
     }

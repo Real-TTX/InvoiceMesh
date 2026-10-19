@@ -24,6 +24,11 @@ public sealed class InvoiceReader(SpecificationRegistry registry, IOcrEngine? oc
 {
     public const long MaxBytes = 50L * 1024 * 1024;
 
+    /// <summary>The code of the messages of the schema check, and of the one that says it passed.</summary>
+    public const string Xsd = "XSD";
+
+    public const string XsdValid = "XSD-VALID";
+
     public async Task<ExtractionResult> ReadAsync(byte[] bytes, string fileName, CancellationToken ct = default)
     {
         var evidence = new List<string>();
@@ -128,6 +133,7 @@ public sealed class InvoiceReader(SpecificationRegistry registry, IOcrEngine? oc
         var described = XmlInvoiceReader.Describe(classification, registry, format, evidence, insidePdf);
         var raw = XmlInvoiceReader.Flatten(root);
         var semantic = XmlInvoiceReader.ReadSemantic(root, classification.Syntax, messages);
+        CheckStructure(bytes, classification.Syntax, root.Name.NamespaceName, described, messages);
         switch (classification.Syntax)
         {
             case InvoiceSyntax.OtherXml:
@@ -155,6 +161,45 @@ public sealed class InvoiceReader(SpecificationRegistry registry, IOcrEngine? oc
             Text = text,
             EmbeddedXml = insidePdf ? bytes : null,
         };
+    }
+
+    /// <summary>
+    /// The check of the structure against the official XML schema. A violation is an error where the specification requires that schema (EN 16931,
+    /// XRechnung, Peppol on UBL 2.1 or CII D16B); for an Extended profile or another UBL version, which may go beyond it, it is a warning.
+    /// </summary>
+    private static void CheckStructure(byte[] bytes, InvoiceSyntax syntax, string rootNamespace, DetectedFormat format, List<ExtractionMessage> messages)
+    {
+        var check = XmlSchemas.Check(bytes, syntax, rootNamespace);
+        if (check is null)
+        {
+            return;
+        }
+
+        if (check.Total == 0)
+        {
+            messages.Add(new ExtractionMessage(MessageSeverity.Info, XsdValid, $"Die Struktur entspricht dem XML-Schema {check.Schema}."));
+            return;
+        }
+
+        var extended = format.Profile?.Contains("Extended", StringComparison.OrdinalIgnoreCase) == true;
+        var otherUbl = syntax == InvoiceSyntax.Ubl && format.SyntaxVersion is { } version && !version.Contains("2.1", StringComparison.Ordinal);
+        var strict = format.Rules != RuleSets.None && !extended && !otherUbl;
+        var severity = strict ? MessageSeverity.Error : MessageSeverity.Warning;
+        foreach (var v in check.Violations)
+        {
+            messages.Add(new ExtractionMessage(severity, Xsd, $"Verstößt gegen das XML-Schema {check.Schema} (Zeile {v.Line}, Spalte {v.Column}): {v.Message}"));
+        }
+
+        if (check.Total > check.Violations.Count)
+        {
+            messages.Add(new ExtractionMessage(severity, Xsd, $"… und {check.Total - check.Violations.Count} weitere Verstöße gegen das XML-Schema {check.Schema}."));
+        }
+
+        if (!strict)
+        {
+            messages.Add(new ExtractionMessage(MessageSeverity.Info, Xsd,
+                $"{format.Standard} {format.Profile} darf über das Schema {check.Schema} hinausgehen: Abweichungen sind deshalb Warnungen, keine Fehler."));
+        }
     }
 
     private async Task<ExtractionResult> ReadPdfAsync(byte[] bytes, DetectedFormat format, List<string> evidence, List<ExtractionMessage> messages, CancellationToken ct)

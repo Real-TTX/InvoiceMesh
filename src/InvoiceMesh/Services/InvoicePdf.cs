@@ -227,7 +227,7 @@ public sealed class InvoicePdf
                     {
                         t.Span(check.Performed ? "✓ " : "– ").FontColor(check.Performed ? "#1b7f3b" : Muted);
                         t.Span($"{Core.Validation.ValidationReport.ScopeLabel(check.Scope)}: {check.Title}");
-                        t.Span(check.Performed ? $" ({check.RuleCount} Regeln)" : $" – nicht geprüft: {check.Reason}").FontColor(Muted);
+                        t.Span(check.Performed ? $" ({UiKit.Ui.CountNoun(check.RuleCount, check.Scope == CheckScope.Structure ? "Schemas" : "Regeln")})" : $" – nicht geprüft: {check.Reason}").FontColor(Muted);
                     });
                 }
 
