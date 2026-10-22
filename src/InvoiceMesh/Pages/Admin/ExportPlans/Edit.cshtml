@@ -1,0 +1,81 @@
+@page
+@model InvoiceMesh.Pages.Admin.ExportPlans.EditModel
+@{
+    var selections = Controls.Options.Of<ExportSelection>(InvoiceMesh.Pages.Admin.ExportPlans.EditModel.Of);
+    var deliveries = Controls.Options.Of<DeliveryKind>(InvoiceMesh.Pages.Admin.ExportPlans.IndexModel.Of);
+    var schedules = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+    {
+        new("Täglich", nameof(ScheduleKind.Daily)), new("Wöchentlich", nameof(ScheduleKind.Weekly)), new("Monatlich", nameof(ScheduleKind.Monthly)), new("Alle paar Stunden", nameof(ScheduleKind.Hourly)),
+    };
+    var days = Enum.GetValues<DayOfWeek>().Select(d => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(InvoiceMesh.Services.Backup.BackupSchedule.DayName(d), d.ToString())).ToList();
+    var plan = Model.Plan;
+}
+
+<form class="mat-form" method="post" asp-page-handler="" novalidate>
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <im-summary />
+    @if (Model.Test is not null)
+    {
+        <div class="mat-alert mat-alert--@(Model.TestOk ? "success" : "danger")" role="status">@Ui.Icon(Model.TestOk ? "check-circle" : "alert")<div class="mat-alert__body">@Model.Test</div></div>
+    }
+    else if (plan?.LastRunDate is { } last)
+    {
+        <div class="mat-alert mat-alert--@(plan.LastRunOk ? "info" : "danger")" role="status">@Ui.Icon(plan.LastRunOk ? "history" : "alert")<div class="mat-alert__body"><strong>Zuletzt gelaufen @Fmt.Moment(last):</strong> @plan.LastStatus@(plan.IsEnabled && plan.NextRunDate is { } next ? $" Nächstes Mal {Fmt.Moment(next)}." : "")</div></div>
+    }
+
+    @if (Model.Profiles.Count == 0)
+    {
+        <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body">Es gibt noch keinen Export. <a href="/Exports/Edit">Lege zuerst einen Export an</a>: Er bestimmt Schema, Format und Felder der Datei.</div></div>
+    }
+
+    <im-card title="Was" icon="download">
+        <div class="mat-form__grid">
+            <im-input for="Input.Name" label="Name" required="true" full="true" hint="Zum Beispiel „Täglich an die Buchhaltung“." />
+            <im-select for="Input.ExportProfileId" label="Export" items="Model.Profiles" empty="(bitte wählen)" hint="Format (JSON, CSV, XML), Schema und Felder kommen aus dem Export." />
+            <im-select for="Input.Selection" label="Welche Belege" items="selections" />
+            <im-input for="Input.Days" label="Tage" type="number" min="1" max="3660" hint="Die letzten Tage, gezählt ab der Verarbeitung. Bei „Neue seit dem letzten Lauf“: wie weit der erste Lauf zurückgeht." />
+            <im-switch for="Input.OnlyValid" label="Nur Belege, die nicht ungültig sind" full="true" />
+            <im-switch for="Input.SkipEmpty" label="Keine Datei, wenn es nichts zu exportieren gibt" full="true" />
+            <im-switch for="Input.IsEnabled" label="Der Plan läuft von selbst" full="true" />
+        </div>
+    </im-card>
+
+    <im-card title="Wann" icon="calendar">
+        <div class="mat-form__grid">
+            <im-select for="Input.Schedule" label="Wie oft" items="schedules" />
+            <im-input for="Input.IntervalHours" label="Alle … Stunden" type="number" min="1" max="168" show-if="Input.Schedule" show-value="Hourly" />
+            <im-input for="Input.TimeOfDay" label="Uhrzeit" type="time" show-if="Input.Schedule" show-value="Daily,Weekly,Monthly" hint="Die Uhrzeit dieser Installation." />
+            <im-select for="Input.DayOfWeek" label="Wochentag" items="days" show-if="Input.Schedule" show-value="Weekly" />
+            <im-input for="Input.DayOfMonth" label="Tag im Monat" type="number" min="1" max="31" show-if="Input.Schedule" show-value="Monthly" hint="Hat ein Monat weniger Tage, läuft der Plan am letzten Tag." />
+        </div>
+    </im-card>
+
+    <im-card title="Wohin" icon="route">
+        <div class="mat-form__grid">
+            <im-select for="Input.Delivery" label="Wohin" items="deliveries" full="true" />
+            <im-input for="Input.Path" label="Ordner" full="true" hint="Ordner: ein Pfad relativ zum Daten-Volume (leer: exporte) oder ein eingehängter Ordner wie /exporte. NAS: ein Ordner in der Freigabe." show-if="Input.Delivery" show-value="Folder,Smb" />
+            <im-input for="Input.Host" label="Server" hint="Name oder Adresse des NAS, zum Beispiel nas.local" show-if="Input.Delivery" show-value="Smb" />
+            <im-input for="Input.Share" label="Freigabe" show-if="Input.Delivery" show-value="Smb" />
+            <im-input for="Input.Domain" label="Domäne (optional)" autocomplete="off" show-if="Input.Delivery" show-value="Smb" />
+            <im-input for="Input.UserName" label="Benutzername" autocomplete="off" show-if="Input.Delivery" show-value="Smb" />
+            <im-input for="Input.Password" label="Passwort" type="password" autocomplete="new-password" show-if="Input.Delivery" show-value="Smb" hint="@(Model.HasPassword ? "Leer lassen, um das gespeicherte Passwort zu behalten." : "Wird verschlüsselt gespeichert.")" />
+            <im-input for="Input.Url" label="Adresse" type="url" full="true" show-if="Input.Delivery" show-value="Webhook" hint="Die Datei geht per HTTP POST dorthin, mit ihrem Namen im Header Content-Disposition. Eine Antwort 2xx zählt als angenommen." />
+            <im-input for="Input.HeaderName" label="Header (optional)" autocomplete="off" show-if="Input.Delivery" show-value="Webhook" hint="Zum Beispiel Authorization" />
+            <im-input for="Input.HeaderValue" label="Wert des Headers" type="password" autocomplete="new-password" show-if="Input.Delivery" show-value="Webhook" hint="@(Model.HasHeaderValue ? "Leer lassen, um den gespeicherten Wert zu behalten." : "Zum Beispiel Bearer … – wird verschlüsselt gespeichert.")" />
+        </div>
+    </im-card>
+
+    @if (plan is not null)
+    {
+        <im-buttons back-href="/Admin/ExportPlans" delete-url="@Url.Page("/Admin/ExportPlans/Edit", "Delete", new { id = Model.Id })" delete-confirm="Diesen Plan löschen? Die Dateien, die er abgeliefert hat, bleiben.">
+            <button type="submit" formnovalidate asp-page-handler="Test" class="mat-btn mat-btn--secondary">@Ui.Icon("activity")<span>Prüfen</span></button>
+            <button type="submit" formnovalidate asp-page-handler="Run" asp-route-id="@Model.Id" class="mat-btn mat-btn--secondary" data-confirm="Diesen Export jetzt ausführen und abliefern?" data-confirm-ok="Jetzt ausführen">@Ui.Icon("play")<span>Jetzt ausführen</span></button>
+        </im-buttons>
+    }
+    else
+    {
+        <im-buttons back-href="/Admin/ExportPlans">
+            <button type="submit" formnovalidate asp-page-handler="Test" class="mat-btn mat-btn--secondary">@Ui.Icon("activity")<span>Prüfen</span></button>
+        </im-buttons>
+    }
+</form>

@@ -56,6 +56,18 @@ public sealed class ExportService(ImDbContext db, DefinitionService definitions,
         return new ExportResult(bytes, type, name, records.Count, skipped);
     }
 
+    /// <summary>The ids of the documents a planned export takes: those processed after <paramref name="afterUtc"/> up to <paramref name="untilUtc"/>, oldest first.</summary>
+    public async Task<List<long>> SelectProcessedAsync(DateTime afterUtc, DateTime untilUtc, bool onlyValid, CancellationToken ct = default)
+    {
+        var query = db.Invoice.Where(i => i.ProcessingStatus == ProcessingStatus.Processed && i.ProcessedDate > afterUtc && i.ProcessedDate <= untilUtc);
+        if (onlyValid)
+        {
+            query = query.Where(i => i.ValidationStatus != Core.Validation.ValidationStatus.Invalid);
+        }
+
+        return await query.OrderBy(i => i.ProcessedDate).Select(i => i.Id).Take(5000).ToListAsync(ct);
+    }
+
     /// <summary>The ids of the documents an export takes: the processed ones in a time span of their receipt (local dates), newest first.</summary>
     public async Task<List<long>> SelectAsync(DateOnly? from, DateOnly? to, bool onlyValid, CancellationToken ct = default)
     {

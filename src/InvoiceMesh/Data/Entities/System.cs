@@ -65,7 +65,7 @@ public enum ScheduleKind
     Monthly,
 }
 
-public class BackupPlan : AuditedEntity
+public class BackupPlan : AuditedEntity, ISchedulePlan
 {
     public string Name { get; set; } = "";
 

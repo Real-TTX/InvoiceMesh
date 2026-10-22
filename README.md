@@ -42,6 +42,16 @@ That correction is stored next to the original, which is never touched.
   totals, taxes and line items. Every value carries its **source and confidence**.
 - **New formats without new code:** register your own specification identifiers under *Einstellungen › Formate*.
 
+**Getting invoices in and out**
+- **Upload** in the browser: many files at once, drag and drop, **ZIP files** unpacked.
+- **Intake by itself**, every few minutes:
+  - a **folder** the scanner writes to, mounted into the container;
+  - a folder on a **NAS share** (SMB, nothing to mount);
+  - an **e-mail mailbox** (IMAP): the attachments of unread mails, then the mail is moved away.
+- A **REST API** with keys for other systems: deliver invoices, then fetch state, data, report, XRechnung and files.
+- **Planned exports**: an export on a schedule, delivered into a folder, onto the NAS or to a **webhook**.
+- Every document keeps **where it came from**: uploaded by whom, which mail, which folder, which API key, which ZIP.
+
 **Normalising**
 - **Your own target schema:**
   - Groups and fields with types, required flags, defaults and allowed values.
@@ -143,6 +153,16 @@ sure the reader was. Every change produces a new revision, and older ones stay r
 | Files of an invoice | An export | A share link, opened without an account |
 |---|---|---|
 | ![Original, XRechnung, PDF view and report](docs/images/files.png) | ![A CSV export, one row per line item](docs/images/export.png) | ![The share page](docs/images/share.png) |
+
+### Invoices that come by themselves, exports that go by themselves
+
+| Intake: folders and mailboxes | A mailbox | A planned export | API keys |
+|---|---|---|---|
+| ![The intake sources with their last result](docs/images/intake.png) | ![An IMAP mailbox as an intake source](docs/images/intake-mail.png) | ![A daily CSV export into a folder](docs/images/exportplan.png) | ![API keys and how to call the API](docs/images/apikeys.png) |
+
+A scanner drops PDFs into a folder, suppliers mail to rechnungen@…, an ERP posts files to the API: all of them end up as
+documents like an upload, and each one shows where it came from. Planned exports hand the result on without anybody
+clicking.
 
 ### Backups to the NAS
 
@@ -280,7 +300,43 @@ Worth knowing:
 - **Restoring** happens under *Einstellungen › Backup › Wiederherstellung*. It makes a safety copy of the current state
   first.
 
-### 3. Behind a reverse proxy
+### 3. Invoices from a scanner, a mailbox or another system
+
+Under *Einstellungen › Eingänge* you add the places invoices come from. Each one is checked every few minutes, and
+*Jetzt abholen* checks it at once:
+
+- **A folder the scanner writes to.** Mount it and add an intake of the kind *Ordner* with the path inside the container,
+  e.g. `/eingang`. Taken files move to `verarbeitet/` below it, and files that are no invoice move to `fehler/`. The same
+  UID 1654 rule as for backups applies.
+
+  ```yaml
+      volumes:
+        - invoicemesh-data:/data
+        - /volume1/scans/rechnungen:/eingang
+  ```
+
+- **A folder on the NAS without mounting it:** kind *NAS (SMB-Freigabe)*, with server, share, folder and account.
+- **A mailbox** such as `rechnungen@your-company`: kind *E-Mail-Postfach (IMAP)*, with server, port, account and the
+  folder to read.
+  - It takes the PDF, XML and ZIP attachments of unread mails.
+  - The mail is then marked as read and moved, e.g. to `Rechnungen/Verarbeitet`.
+  - Many providers want an app password for this.
+- **Another system** delivers over the API. Make a key under *Einstellungen › API*; it is shown once:
+
+  ```bash
+  curl -H "Authorization: Bearer im_…" -F "file=@rechnung.pdf" https://invoices.example.com/api/v1/invoices
+  curl -H "Authorization: Bearer im_…" https://invoices.example.com/api/v1/invoices/42/normalized
+  ```
+
+**Getting data out:** *Einstellungen › Geplante Exporte* runs an export (JSON, CSV or XML from *Exporte*) on a schedule.
+
+- It takes the invoices that are new since the last run, or those of the last N days.
+- The file goes into a folder, onto the NAS, or to a webhook as an HTTP POST, with an optional header such as
+  `Authorization`.
+
+The full API reference is in [docs/OPERATIONS.md](docs/OPERATIONS.md#api).
+
+### 4. Behind a reverse proxy
 
 InvoiceMesh speaks plain HTTP on port 2308. Anything beyond your own network needs TLS in front. Tell InvoiceMesh
 its public address, because share links carry it, and only send the cookie over HTTPS:
@@ -303,7 +359,7 @@ invoices.example.com {
 
 If the proxy runs in the same Docker network, drop the `ports:` section so port 2308 is not open to the outside.
 
-### 4. From source
+### 5. From source
 
 ```bash
 docker compose up -d --build                              # release build of this checkout
@@ -338,6 +394,9 @@ The **settings menu** (*Einstellungen*, bottom left) holds the administration:
 | **Freigaben** | All share links, with the option to revoke them |
 | **Verarbeitung** | OCR languages, automatic XRechnung and PDF, which XRechnung syntax, the tolerance for totals, the maximum upload size, duplicate warnings |
 | **Formate** | Your own specification identifiers, for formats InvoiceMesh does not know yet |
+| **Eingänge** | Folders, NAS shares and mailboxes invoices come from by themselves |
+| **Geplante Exporte** | Exports on a schedule, delivered into a folder, onto the NAS or to a webhook |
+| **API** | Keys for other systems, and how to call the API |
 | **Speicher (NAS)** | Where originals and generated files live |
 | **Backup** | Targets, plans, restoring |
 | **Sicherheit** | Session length, whether TOTP is mandatory for administrators, how long share links stay valid |
@@ -357,6 +416,8 @@ Invoices already processed keep their versions until you normalise them again.
 ├─ keys/      keys for cookies and stored passwords (sessions survive restarts)
 ├─ files/     originals, unchanged, and generated files (empty when they live on the NAS)
 ├─ backups/   local backup targets and the safety copies made before a restore
+├─ eingang/   the default folder of a folder intake (taken files move to verarbeitet/, failed ones to fehler/)
+├─ exporte/   the default folder of planned exports
 └─ tmp/       scratch space for backups
 ```
 
@@ -408,7 +469,8 @@ cd tests/e2e; npm install; node flow.js http://localhost:2308    # browser run w
 - **Unit tests** need nothing. They cover the readers, text extraction, mapping, transforms, the rules, the
   XRechnung round trip and the exports.
 - **Integration tests** need the PostgreSQL of the development stack.
-- **NAS tests** need a Samba server (`INVOICEMESH_TEST_SMB`). The CI starts one.
+- **NAS tests** need a Samba server (`INVOICEMESH_TEST_SMB`), the **mailbox test** a mail server (`INVOICEMESH_TEST_IMAP`,
+  GreenMail). The CI starts both.
 
 ## How it is built
 
@@ -423,7 +485,7 @@ cd tests/e2e; npm install; node flow.js http://localhost:2308    # browser run w
   - **PdfPig** for reading PDFs;
   - **Tesseract** and **Poppler** for scans;
   - **QuestPDF** for writing PDFs (community licence: free below USD 1 M annual revenue);
-  - **SMBLibrary** for the NAS.
+  - **SMBLibrary** for the NAS, **MailKit** for mailboxes.
 - Checked with the **KoSIT validator** (XRechnung 3.0.2) in CI.
 
 Source comments are in English, the interface and parts of the documentation are in German.

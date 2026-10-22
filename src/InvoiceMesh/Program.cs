@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using InvoiceMesh.Api;
 using InvoiceMesh.Configuration;
 using InvoiceMesh.Core;
 using InvoiceMesh.Core.Extraction;
@@ -7,6 +8,7 @@ using InvoiceMesh.Data;
 using InvoiceMesh.Data.Entities;
 using InvoiceMesh.Services;
 using InvoiceMesh.Services.Auth;
+using InvoiceMesh.Services.Automation;
 using InvoiceMesh.Services.Backup;
 using InvoiceMesh.Services.Processing;
 using InvoiceMesh.Storage;
@@ -87,6 +89,15 @@ builder.Services.AddScoped<BackupStoreFactory>();
 builder.Services.AddScoped<DatabaseArchive>();
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddHostedService<BackupScheduler>();
+builder.Services.AddScoped<FolderFactory>();
+builder.Services.AddSingleton<MailboxReader>();
+builder.Services.AddScoped<IntakeService>();
+builder.Services.AddScoped<ExportPlanService>();
+builder.Services.AddScoped<ApiKeyService>();
+builder.Services.AddHostedService<AutomationScheduler>();
+// Planned exports deliver to webhooks: a short timeout, no cookies, redirects not followed (the address is the one the administrator gave).
+builder.Services.AddHttpClient(ExportPlanService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(60))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
 builder.Services.AddHostedService<ProcessingWorker>();
 builder.Services.AddHostedService<MaintenanceService>();
 builder.Services.AddScoped<SystemService>();
@@ -329,6 +340,7 @@ app.MapGet("/s/{token:guid}/file/{what}", async (Guid token, string what, long? 
     }
 }).AllowAnonymous();
 
+app.MapInvoiceApi();
 app.MapRazorPages();
 
 await app.RunAsync();

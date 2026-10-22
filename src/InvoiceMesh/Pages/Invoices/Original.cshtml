@@ -52,6 +52,7 @@
         <div class="mat-card__body">
             <dl class="mat-kv">
                 <dt>Datei</dt><dd class="im-break">@doc.FileName</dd>
+                <dt>Eingang</dt><dd class="im-break">@Labels.Of(doc.Source), @Fmt.Moment(doc.ReceivedDate)@(doc.SourceDetail is { } via ? $" · {via}" : "")</dd>
                 <dt>Größe</dt><dd>@Fmt.FileSize(doc.SizeBytes)</dd>
                 <dt>Dateityp</dt><dd>@(f?.Kind.ToString() ?? doc.FileKind)@(f?.ImageFormat is { } img ? $" ({img})" : "")@(f?.PageCount is { } p ? $", {p} Seite(n)" : "")</dd>
                 <dt>Syntax</dt><dd>@(f?.SyntaxVersion ?? "–")</dd>

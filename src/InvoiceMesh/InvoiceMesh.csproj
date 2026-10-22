@@ -21,6 +21,10 @@
     <PackageReference Include="QuestPDF" Version="2025.*" />
     <!-- SMB client: the files and the backups on a NAS -->
     <PackageReference Include="SMBLibrary" Version="1.5.7.1" />
+    <!-- Reads the mailbox of an intake source over IMAP (MIT licence). -->
+    <PackageReference Include="MailKit" Version="4.*" />
+    <!-- MailKit asks for 10.0.0, which has known vulnerabilities: the newest patch is taken instead. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.*" />
   </ItemGroup>
 
   <ItemGroup>

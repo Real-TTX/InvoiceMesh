@@ -9,9 +9,9 @@
                 <label class="mat-label" for="files">Rechnungen <span class="mat-req" aria-hidden="true">*</span></label>
                 <div class="mat-upload im-drop" data-upload data-paste data-max-files="@UploadModel.MaxFiles" data-max-size="@(Model.MaxMb)MB">
                     <input class="mat-upload__input" type="file" id="files" name="Files" multiple required data-msg-required="Bitte wähle mindestens eine Datei."
-                           accept=".pdf,.xml,.png,.jpg,.jpeg,.tif,.tiff,application/pdf,application/xml,text/xml,image/png,image/jpeg,image/tiff" aria-describedby="files-hint" />
+                           accept=".pdf,.xml,.zip,.png,.jpg,.jpeg,.tif,.tiff,application/pdf,application/zip,application/xml,text/xml,image/png,image/jpeg,image/tiff" aria-describedby="files-hint" />
                 </div>
-                <span class="mat-hint" id="files-hint">Bis zu @UploadModel.MaxFiles Dateien je @Model.MaxMb MB. Die Originaldatei wird unverändert gespeichert.</span>
+                <span class="mat-hint" id="files-hint">Bis zu @UploadModel.MaxFiles Dateien je @Model.MaxMb MB. ZIP-Dateien werden ausgepackt, jede Datei darin wird ein Beleg. Die Originaldatei wird unverändert gespeichert.</span>
             </div>
         </im-card>
         <im-buttons save-text="Hochladen" save-icon="upload" back-href="/Invoices" />
@@ -30,7 +30,12 @@
             <dl class="mat-kv">
                 <dt>Strukturiert</dt><dd>XRechnung (UBL, CII), Peppol BIS Billing 3.0, ZUGFeRD / Factur-X, EN 16931, UBL 2.x, CII</dd>
                 <dt>Dokumente</dt><dd>PDF, Scan-PDF, PNG, JPEG, TIFF</dd>
+                <dt>Sammlungen</dt><dd>ZIP mit beliebig vielen Belegen</dd>
             </dl>
+            @if (Model.IsAdmin)
+            {
+                <p class="mat-hint">Belege können auch von selbst kommen: aus einem Ordner, von einer NAS-Freigabe, aus einem E-Mail-Postfach (<a href="/Admin/Intake">Eingänge</a>) oder über die <a href="/Admin/ApiKeys">API</a>.</p>
+            }
         </div>
     </aside>
 </div>

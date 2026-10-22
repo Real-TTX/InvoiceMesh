@@ -1,12 +1,14 @@
 using InvoiceMesh.Configuration;
+using InvoiceMesh.Data.Entities;
 using InvoiceMesh.Services;
+using InvoiceMesh.Services.Automation;
 using InvoiceMesh.UiKit;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InvoiceMesh.Pages.Invoices;
 
-/// <summary>Takes documents in: any number of files at once. Each is stored as it came and queued; the processing runs in the background.</summary>
-public sealed class UploadModel(InvoiceService invoices, ConfigStore config, ActivityLogger log, NavCounts counts) : PageModelBase
+/// <summary>Takes documents in: any number of files at once, ZIPs unpacked. Each is stored as it came and queued; the processing runs in the background.</summary>
+public sealed class UploadModel(IntakeService intake, ConfigStore config, ActivityLogger log, NavCounts counts, ICurrentUser user) : PageModelBase
 {
     public const int MaxFiles = 50;
 
@@ -14,6 +16,8 @@ public sealed class UploadModel(InvoiceService invoices, ConfigStore config, Act
     public List<IFormFile> Files { get; set; } = [];
 
     public int MaxMb => config.Current.Processing.MaxUploadMb;
+
+    public bool IsAdmin => user.IsAdmin;
 
     public void OnGet() => Head("Belege hochladen", "Strukturierte Rechnungen, PDFs und Scans: das Format wird am Inhalt erkannt.", ("Belege", "/Invoices"), ("Hochladen", null));
 
@@ -26,27 +30,17 @@ public sealed class UploadModel(InvoiceService invoices, ConfigStore config, Act
             return Page();
         }
 
-        var added = new List<long>();
-        var problems = new List<string>();
-        var duplicates = 0;
+        var outcome = new IntakeOutcome();
         foreach (var file in Files.Take(MaxFiles))
         {
-            try
-            {
-                using var buffer = new MemoryStream();
-                await file.CopyToAsync(buffer, HttpContext.RequestAborted);
-                var result = await invoices.AddAsync(buffer.ToArray(), file.FileName, ct: HttpContext.RequestAborted);
-                added.Add(result.Document.Id);
-                if (result.DuplicateOf is not null)
-                {
-                    duplicates++;
-                }
-            }
-            catch (InvoiceException ex)
-            {
-                problems.Add(ex.Message);
-            }
+            using var buffer = new MemoryStream();
+            await file.CopyToAsync(buffer, HttpContext.RequestAborted);
+            outcome.Add(await intake.AddAsync(file.FileName, buffer.ToArray(), InvoiceSource.Upload, user.Name is { } name ? $"hochgeladen von {name}" : null, HttpContext.RequestAborted));
         }
+
+        var added = outcome.Added.Select(a => a.Document.Id).ToList();
+        var problems = outcome.Problems;
+        var duplicates = outcome.Duplicates;
 
         counts.Invalidate();
         if (added.Count > 0)

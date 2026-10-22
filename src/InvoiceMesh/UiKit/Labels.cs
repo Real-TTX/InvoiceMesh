@@ -9,6 +9,15 @@ namespace InvoiceMesh.UiKit;
 /// <summary>The German words for the enums of the data model, and the tone of a status pill (the colour is never alone: the pill carries the word and an icon).</summary>
 public static class Labels
 {
+    public static string Of(InvoiceSource s) => s switch
+    {
+        InvoiceSource.Upload => "Hochgeladen",
+        InvoiceSource.Demo => "Beispieldaten",
+        InvoiceSource.Api => "Über die API",
+        InvoiceSource.Folder => "Aus einem Ordner",
+        _ => "Per E-Mail",
+    };
+
     public static string Of(UserRole r) => r == UserRole.Admin ? "Administrator" : "Benutzer";
 
     public static string Of(ProcessingStatus s) => s switch

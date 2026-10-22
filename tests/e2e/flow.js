@@ -72,6 +72,8 @@ function fail(message) {
     ['dashboard', '/'], ['invoices', '/Invoices'], ['upload', '/Invoices/Upload'], ['schemas', '/Schemas'], ['schema', '/Schemas/Edit?id=1'],
     ['mappings', '/Mappings'], ['mapping', '/Mappings/Edit?id=1'], ['rule', '/Mappings/Rule?id=1&target=seller.name'], ['preview', '/Mappings/Test?id=1'],
     ['exports', '/Exports'], ['export', '/Exports/Edit?id=3'], ['formats', '/Formats'], ['processing', '/Admin/Processing'], ['backup', '/Admin/Backup'],
+    ['intake', '/Admin/Intake'], ['intake-new', '/Admin/Intake/Edit'], ['exportplans', '/Admin/ExportPlans'], ['exportplan-new', '/Admin/ExportPlans/Edit'],
+    ['apikeys', '/Admin/ApiKeys'], ['apikey-new', '/Admin/ApiKeys/Edit'],
   ];
   for (const id of ids) {
     for (const tab of ['Details', 'Original', 'Data', 'Validation', 'Files', 'History', 'Correct', 'Share']) pages.push([`doc${id}-${tab.toLowerCase()}`, `/Invoices/${tab}?id=${id}`]);

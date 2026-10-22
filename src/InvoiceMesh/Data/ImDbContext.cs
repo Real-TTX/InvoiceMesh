@@ -51,6 +51,12 @@ public class ImDbContext(DbContextOptions<ImDbContext> options, ICurrentUser cur
 
     public DbSet<BackupRun> BackupRun => Set<BackupRun>();
 
+    public DbSet<IntakeSource> IntakeSource => Set<IntakeSource>();
+
+    public DbSet<ExportPlan> ExportPlan => Set<ExportPlan>();
+
+    public DbSet<ApiKey> ApiKey => Set<ApiKey>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         // The document of InvoiceMesh is called InvoiceDocument in code (an "Invoice" is everywhere else in .NET); its table is "Invoice".
@@ -171,6 +177,14 @@ public class ImDbContext(DbContextOptions<ImDbContext> options, ICurrentUser cur
         b.Entity<ActivityLog>().HasIndex(x => x.OccurredDate);
         b.Entity<BackupPlan>().HasOne(x => x.Target).WithMany().HasForeignKey(x => x.TargetId).OnDelete(DeleteBehavior.Restrict);
         b.Entity<BackupRun>().HasOne(x => x.Plan).WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.SetNull);
+
+        b.Entity<ExportPlan>().HasOne(x => x.ExportProfile).WithMany().HasForeignKey(x => x.ExportProfileId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<ApiKey>(e =>
+        {
+            e.HasIndex(x => x.KeyHash).IsUnique();
+            e.HasIndex(x => x.Token).IsUnique();
+        });
+        b.Entity<InvoiceDocument>().Property(x => x.SourceDetail).HasMaxLength(500);
     }
 
     private static LambdaExpression NotDeleted(Type clrType)

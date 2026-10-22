@@ -47,7 +47,7 @@ public sealed class InvoiceService(
     public sealed record AddResult(InvoiceDocument Document, InvoiceDocument? DuplicateOf);
 
     /// <summary>Stores the original as it came and queues the document for processing.</summary>
-    public async Task<AddResult> AddAsync(byte[] bytes, string fileName, InvoiceSource source = InvoiceSource.Upload, CancellationToken ct = default)
+    public async Task<AddResult> AddAsync(byte[] bytes, string fileName, InvoiceSource source = InvoiceSource.Upload, string? sourceDetail = null, CancellationToken ct = default)
     {
         var max = config.Current.Processing.MaxUploadMb * 1024L * 1024L;
         if (bytes.LongLength == 0)
@@ -73,6 +73,7 @@ public sealed class InvoiceService(
             Sha256 = sha,
             OriginalFile = original,
             Source = source,
+            SourceDetail = sourceDetail is { Length: > 500 } ? sourceDetail[..500] : sourceDetail,
             ReceivedDate = clock.GetUtcNow().UtcDateTime,
             FileKind = kind.ToString(),
             FormatCode = kind switch { FileKind.Pdf => "PDF", FileKind.Image => "Bild", FileKind.Xml => "XML", _ => "?" },

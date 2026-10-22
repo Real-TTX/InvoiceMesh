@@ -130,6 +130,12 @@ public sealed class ShellFactory(ICurrentUser user, NavCounts counts, IHttpConte
             new("Verarbeitung", "/Admin/Processing", "sliders"),
             new("Formate", "/Admin/Formats", "file-code"),
         ]),
+        new("Automatisierung",
+        [
+            new("Eingänge", "/Admin/Intake", "folder-open"),
+            new("Geplante Exporte", "/Admin/ExportPlans", "route"),
+            new("API", "/Admin/ApiKeys", "key"),
+        ]),
         new("System",
         [
             new("Speicher (NAS)", "/Admin/Storage", "hard-drive"),

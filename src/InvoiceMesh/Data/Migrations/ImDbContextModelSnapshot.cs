@@ -74,6 +74,67 @@ namespace InvoiceMesh.Data.Migrations
                     b.ToTable("ActivityLog");
                 });
 
+            modelBuilder.Entity("InvoiceMesh.Data.Entities.ApiKey", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("CanImport")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("CreateUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ExpiresDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("KeyPrefix")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastUsedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("Token")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdateDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("UpdateUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KeyHash")
+                        .IsUnique();
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("ApiKey");
+                });
+
             modelBuilder.Entity("InvoiceMesh.Data.Entities.BackupPlan", b =>
                 {
                     b.Property<long>("Id")
@@ -275,6 +336,125 @@ namespace InvoiceMesh.Data.Migrations
                     b.ToTable("BackupTarget");
                 });
 
+            modelBuilder.Entity("InvoiceMesh.Data.Entities.ExportPlan", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CoveredUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("CreateUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("DayOfMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Delivery")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Domain")
+                        .HasColumnType("text");
+
+                    b.Property<long>("ExportProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HeaderName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HeaderValueProtected")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Host")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntervalHours")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LastCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastRunDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("LastRunOk")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastStatus")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("NextRunDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("OnlyValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PasswordProtected")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Schedule")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Selection")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Share")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("SkipEmpty")
+                        .HasColumnType("boolean");
+
+                    b.Property<TimeOnly>("TimeOfDay")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<DateTime>("UpdateDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("UpdateUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExportProfileId");
+
+                    b.ToTable("ExportPlan");
+                });
+
             modelBuilder.Entity("InvoiceMesh.Data.Entities.ExportProfile", b =>
                 {
                     b.Property<long>("Id")
@@ -368,6 +548,96 @@ namespace InvoiceMesh.Data.Migrations
                     b.HasIndex("InvoiceId", "Kind");
 
                     b.ToTable("GeneratedFile");
+                });
+
+            modelBuilder.Entity("InvoiceMesh.Data.Entities.IntakeSource", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("CreateUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Domain")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DoneFolder")
+                        .HasColumnType("text");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Host")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntervalMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("LastCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastRunDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("LastRunOk")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastStatus")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MailFolder")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("NextRunDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PasswordProtected")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Security")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Share")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdateDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("UpdateUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("IntakeSource");
                 });
 
             modelBuilder.Entity("InvoiceMesh.Data.Entities.InvoiceCorrection", b =>
@@ -548,6 +818,10 @@ namespace InvoiceMesh.Data.Migrations
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("SourceDetail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Standard")
                         .HasColumnType("text");
@@ -1365,6 +1639,17 @@ namespace InvoiceMesh.Data.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("InvoiceMesh.Data.Entities.ExportPlan", b =>
+                {
+                    b.HasOne("InvoiceMesh.Data.Entities.ExportProfile", "ExportProfile")
+                        .WithMany()
+                        .HasForeignKey("ExportProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ExportProfile");
                 });
 
             modelBuilder.Entity("InvoiceMesh.Data.Entities.ExportProfile", b =>

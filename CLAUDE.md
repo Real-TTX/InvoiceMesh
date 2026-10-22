@@ -22,6 +22,7 @@ dotnet ef migrations add <Name> -p src/InvoiceMesh -s src/InvoiceMesh -o Data/Mi
 Test changes by **rebuilding the container and redeploying the stack**. Wait for `http://localhost:2308/health`. The app shell scrolls inside `.mat-main`: a
 full-page screenshot needs a viewport as tall as the content (flow.js does it).
 
+The mailbox test needs GreenMail (`INVOICEMESH_TEST_IMAP=localhost;imap=3143;smtp=3025`, any sign-in; the CI starts one, locally see docs/OPERATIONS.md).
 The NAS tests need Samba on 445 (`INVOICEMESH_TEST_SMB`, the CI starts one). On Windows 445 is taken: run `servercontainers/samba` with a volume on
 `/shares/backups` in the network `invoicemesh-dev_default` and `dotnet test` in `mcr.microsoft.com/dotnet/sdk:10.0` in the same network (copy the source in without
 `bin`/`obj`; `INVOICEMESH_TEST_DB=Host=db;...`, `INVOICEMESH_TEST_SMB=<samba container>;share=backups;user=backup;password=backup-secret`). `MSYS_NO_PATHCONV=1` in Git Bash.
@@ -43,7 +44,10 @@ The NAS tests need Samba on 445 (`INVOICEMESH_TEST_SMB`, the CI starts one). On 
   (versioned schemas and mappings: draft → active → retired, mapping selection by specificity and priority, diffs), `Processing/` (queue + worker, Tesseract),
   `InvoicePdf`, `ExportService`, `DemoData` (`Demo/*` embedded samples), `Backup/`, `Auth/`; `Pages/` (Invoices with tabs, Schemas, Mappings, Exports, Formats, Admin,
   Account, Share); `Data/` (ImDbContext, entities, migrations); `Controls/` + `UiKit/` (shell, lists, `im-*` tag helpers).
-- `tests/InvoiceMesh.Tests`: `Core/` (with `Samples/`), `Web/`, `Integration/` (real app + PostgreSQL / Samba); `tests/e2e/flow.js`.
+  `Services/Automation/`: `IntakeService` (every way in goes through `AddAsync`: ZIPs unpacked by `Core/Extraction/Archives`, source + detail kept; intake sources
+  folder/SMB via `Folders.cs` (`IFileFolder`), mailboxes via `MailboxReader` (MailKit)), `ExportPlanService` (planned exports → folder, SMB, webhook),
+  `ApiKeyService` (keys `im_…`, SHA-256 stored), `AutomationScheduler` (ticks both every 30 s). `Api/InvoiceApi.cs`: `/api/v1` with a key, no cookie.
+- `tests/InvoiceMesh.Tests`: `Core/` (with `Samples/`), `Web/`, `Integration/` (real app + PostgreSQL / Samba / GreenMail for IMAP); `tests/e2e/flow.js`.
 
 ## Rules of the domain
 
@@ -56,6 +60,9 @@ The NAS tests need Samba on 445 (`INVOICEMESH_TEST_SMB`, the CI starts one). On 
 - **Versions**: only a draft changes; activating retires the old version. A revision stores schema version + mapping version + extraction; documents on an
   older schema version are shown as such and renormalized on request. Renaming a schema key carries the rename into the mapping drafts.
 - A document is claimed for processing by one `UPDATE ... WHERE Status = Queued`; the worker resets `Processing` to `Queued` at start.
+- Intake and exports never throw at the scheduler: a run writes `LastRunOk` / `LastStatus` on its source or plan. Folder files are taken after 5 s unchanged and
+  moved (`verarbeitet`, `fehler`) or deleted; mails are marked read (+ moved). "New since the last run" exports use `ProcessedDate` with a 30 s settle margin.
+- Edit forms that post back to themselves (a "Prüfen" handler) need `asp-page-handler=""` on the form, or "Speichern" posts to the check again.
 - The XRechnung rules implemented are a subset; the CI runs the **KoSIT validator** on the XRechnungen the tests write (`INVOICEMESH_XRECHNUNG_OUT`).
 - Database: tables PascalCase (the document entity is `InvoiceDocument`, table `Invoice`), `Id` bigint, audit columns filled by `ImDbContext`, `UpdateState` soft
   delete (User, InvoiceDocument, TargetSchema, MappingSet, ExportProfile), enums as text, properties ending in `Json` are `jsonb`, `Token` uuid for secrets.

@@ -7,6 +7,9 @@ public enum InvoiceSource
 {
     Upload,
     Demo,
+    Api,
+    Folder,
+    Mail,
 }
 
 /// <summary>The state of the processing of a document, kept apart from the result of its validation (<see cref="ValidationStatus"/>).</summary>
@@ -43,6 +46,9 @@ public class InvoiceDocument : AuditedEntity, ISoftDeletable
     public StoredFile? EmbeddedXmlFile { get; set; }
 
     public InvoiceSource Source { get; set; } = InvoiceSource.Upload;
+
+    /// <summary>More about the way in: the sender and subject of a mail, the folder, the API key, the ZIP file it was in.</summary>
+    public string? SourceDetail { get; set; }
 
     public DateTime ReceivedDate { get; set; }
 

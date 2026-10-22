@@ -2,11 +2,11 @@ using InvoiceMesh.Data.Entities;
 
 namespace InvoiceMesh.Services.Backup;
 
-/// <summary>When a backup plan runs next. The times of a plan are the clock of the installation (its time zone), the answer is UTC.</summary>
+/// <summary>When a plan (a backup plan, a planned export) runs next. The times of a plan are the clock of the installation (its time zone), the answer is UTC.</summary>
 public static class BackupSchedule
 {
     /// <summary>The first run after <paramref name="afterUtc"/>.</summary>
-    public static DateTime Next(BackupPlan plan, DateTime afterUtc, TimeZoneInfo zone)
+    public static DateTime Next(ISchedulePlan plan, DateTime afterUtc, TimeZoneInfo zone)
     {
         var after = DateTime.SpecifyKind(afterUtc, DateTimeKind.Utc);
         if (plan.Schedule == ScheduleKind.Hourly)
@@ -34,7 +34,7 @@ public static class BackupSchedule
         return after.AddDays(1);
     }
 
-    private static bool Matches(BackupPlan plan, DateOnly day) => plan.Schedule switch
+    private static bool Matches(ISchedulePlan plan, DateOnly day) => plan.Schedule switch
     {
         ScheduleKind.Daily => true,
         ScheduleKind.Weekly => day.DayOfWeek == plan.DayOfWeek,
@@ -56,7 +56,7 @@ public static class BackupSchedule
         return TimeZoneInfo.ConvertTimeToUtc(local, zone);
     }
 
-    public static string Describe(BackupPlan plan) => plan.Schedule switch
+    public static string Describe(ISchedulePlan plan) => plan.Schedule switch
     {
         ScheduleKind.Hourly => plan.IntervalHours == 1 ? "stündlich" : $"alle {plan.IntervalHours} Stunden",
         ScheduleKind.Daily => $"täglich um {plan.TimeOfDay:HH\\:mm} Uhr",

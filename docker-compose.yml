@@ -32,6 +32,8 @@ services:
       # or a folder of the NAS mounted here and entered as "/backups" in a target of the kind "Ordner im Container oder Volume".
       # The app runs as UID 1654, so that folder must be writable for it.
       # - /volume1/backups/invoicemesh:/backups
+      # A folder a scanner writes to, taken in by itself (Einstellungen > Eingänge, kind "Ordner", path /eingang); writable for UID 1654 as well:
+      # - /volume1/scans/rechnungen:/eingang
 
   db:
     image: postgres:17

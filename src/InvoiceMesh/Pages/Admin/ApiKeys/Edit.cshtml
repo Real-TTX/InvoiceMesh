@@ -1,0 +1,53 @@
+@page
+@model InvoiceMesh.Pages.Admin.ApiKeys.EditModel
+@{
+    var key = Model.Key;
+}
+
+<form class="mat-form" method="post" asp-page-handler="" novalidate>
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <im-summary />
+
+    @if (Model.NewKey is { } plain)
+    {
+        <div class="mat-alert mat-alert--success" role="status">
+            @Ui.Icon("key")
+            <div class="mat-alert__body">
+                <strong>Der neue Schlüssel – er wird nur jetzt angezeigt.</strong> Kopiere ihn in das System, das ihn benutzt. InvoiceMesh speichert nur eine Prüfsumme; geht er verloren, erzeugst du einen neuen.
+                <div class="mat-input-group im-newkey">
+                    <input class="mat-input mat-mono" id="new-key" value="@plain" readonly aria-label="Der neue API-Schlüssel" />
+                    <button type="button" class="mat-btn mat-btn--secondary" data-copy="#new-key">@Ui.Icon("copy")<span>Kopieren</span></button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <im-card title="Schlüssel" icon="key">
+        <div class="mat-form__grid">
+            <im-input for="Input.Name" label="Name" required="true" full="true" hint="Wer ihn benutzt, zum Beispiel „ERP“ oder „Scanner-Software“." />
+            <im-switch for="Input.CanImport" label="Darf Belege einliefern" full="true" />
+            <im-switch for="Input.CanRead" label="Darf Belege, Daten und Dateien lesen" full="true" />
+            <im-input for="Input.ExpiresDate" label="Gültig bis (optional)" type="date" hint="Leer: ohne Ablauf. Gültig bis zum Ende dieses Tages." />
+            <im-switch for="Input.IsEnabled" label="Eingeschaltet" />
+        </div>
+        @if (key is not null)
+        {
+            <dl class="mat-kv">
+                <dt>Schlüssel</dt><dd class="im-source">@key.KeyPrefix…</dd>
+                <dt>Angelegt</dt><dd>@Fmt.Moment(key.CreateDate)</dd>
+                <dt>Zuletzt benutzt</dt><dd>@(key.LastUsedDate is null ? "noch nie" : Fmt.Moment(key.LastUsedDate))</dd>
+            </dl>
+        }
+    </im-card>
+
+    @if (key is not null)
+    {
+        <im-buttons back-href="/Admin/ApiKeys" delete-url="@Url.Page("/Admin/ApiKeys/Edit", "Delete", new { id = Model.Id })" delete-confirm="Diesen Schlüssel löschen? Er funktioniert ab sofort nicht mehr.">
+            <button type="submit" formnovalidate asp-page-handler="Renew" asp-route-id="@Model.Id" class="mat-btn mat-btn--secondary" data-confirm="Einen neuen Schlüssel erzeugen? Der alte funktioniert ab sofort nicht mehr." data-confirm-ok="Neu erzeugen">@Ui.Icon("refresh")<span>Neu erzeugen</span></button>
+        </im-buttons>
+    }
+    else
+    {
+        <im-buttons back-href="/Admin/ApiKeys" save-text="Schlüssel erzeugen" save-icon="key" />
+    }
+</form>

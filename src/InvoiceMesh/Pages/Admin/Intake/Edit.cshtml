@@ -1,0 +1,64 @@
+@page
+@model InvoiceMesh.Pages.Admin.Intake.EditModel
+@{
+    var kinds = Controls.Options.Of<IntakeKind>(InvoiceMesh.Pages.Admin.Intake.IndexModel.Of);
+    var securities = Controls.Options.Of<MailSecurity>(InvoiceMesh.Pages.Admin.Intake.EditModel.Of);
+    var source = Model.Source;
+}
+
+<form class="mat-form" method="post" asp-page-handler="" novalidate>
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <im-summary />
+    @if (Model.Test is not null)
+    {
+        <div class="mat-alert mat-alert--@(Model.TestOk ? "success" : "danger")" role="status">@Ui.Icon(Model.TestOk ? "check-circle" : "alert")<div class="mat-alert__body">@Model.Test</div></div>
+    }
+    else if (source?.LastRunDate is { } last)
+    {
+        <div class="mat-alert mat-alert--@(source.LastRunOk ? "info" : "danger")" role="status">@Ui.Icon(source.LastRunOk ? "history" : "alert")<div class="mat-alert__body"><strong>Zuletzt abgeholt @Fmt.Moment(last):</strong> @source.LastStatus@(source.IsEnabled && source.NextRunDate is { } next ? $" Nächstes Mal {Fmt.Moment(next)}." : "")</div></div>
+    }
+
+    <im-card title="Eingang" icon="folder-open">
+        <div class="mat-form__grid">
+            <im-input for="Input.Name" label="Name" required="true" hint="Zum Beispiel „Scanner im Büro“ oder „rechnungen@firma.de“." />
+            <im-select for="Input.Kind" label="Art" items="kinds" />
+            <im-input for="Input.IntervalMinutes" label="Abholen alle … Minuten" type="number" min="1" max="1440" />
+            <im-switch for="Input.IsEnabled" label="Wird von selbst abgeholt" />
+        </div>
+    </im-card>
+
+    <im-card title="Wo" icon="hard-drive">
+        <div class="mat-form__grid">
+            <im-input for="Input.Host" label="Server" hint="NAS: Name oder Adresse, zum Beispiel nas.local (SMB, Port 445). Postfach: der IMAP-Server, zum Beispiel imap.example.com." show-if="Input.Kind" show-value="Smb,Mailbox" />
+            <im-input for="Input.Share" label="Freigabe" hint="Der Name des freigegebenen Ordners, zum Beispiel Scans" show-if="Input.Kind" show-value="Smb" />
+            <im-input for="Input.Port" label="Port" type="number" min="1" max="65535" hint="993 bei TLS, 143 bei STARTTLS" show-if="Input.Kind" show-value="Mailbox" />
+            <im-select for="Input.Security" label="Verschlüsselung" items="securities" show-if="Input.Kind" show-value="Mailbox" />
+            <im-input for="Input.Path" label="Ordner" full="true" hint="Ordner: ein Pfad relativ zum Daten-Volume (leer: eingang) oder ein eingehängter Ordner wie /eingang. NAS: ein Ordner in der Freigabe (leer: die Freigabe selbst)." show-if="Input.Kind" show-value="Folder,Smb" />
+            <im-input for="Input.MailFolder" label="Ordner im Postfach" hint="Meist INBOX. Gelesen werden die ungelesenen E-Mails." show-if="Input.Kind" show-value="Mailbox" />
+            <im-input for="Input.Domain" label="Domäne (optional)" autocomplete="off" show-if="Input.Kind" show-value="Smb" />
+            <im-input for="Input.UserName" label="Benutzername" autocomplete="off" hint="Beim Postfach meist die E-Mail-Adresse" show-if="Input.Kind" show-value="Smb,Mailbox" />
+            <im-input for="Input.Password" label="Passwort" type="password" autocomplete="new-password" hint="@(Model.HasPassword ? "Leer lassen, um das gespeicherte Passwort zu behalten." : "Beim Postfach ein App-Passwort, wenn der Anbieter eines verlangt. Wird verschlüsselt gespeichert.")" show-if="Input.Kind" show-value="Smb,Mailbox" />
+        </div>
+    </im-card>
+
+    <im-card title="Danach" icon="check-square">
+        <div class="mat-form__grid">
+            <im-input for="Input.DoneFolder" label="Danach verschieben nach" full="true" hint="Ordner und NAS: ein Ordner unterhalb, zum Beispiel verarbeitet; leer löscht die Datei (das Original bleibt in InvoiceMesh). Dateien, aus denen kein Beleg wurde, landen in fehler. Postfach: ein Ordner im Postfach, zum Beispiel Rechnungen/Verarbeitet; leer lässt die E-Mail als gelesen liegen." />
+        </div>
+        <p class="mat-hint">ZIP-Dateien werden ausgepackt, jede Datei darin wird ein Beleg. Aus E-Mails werden PDF-, XML- und ZIP-Anhänge genommen, Bilder nur als echte Anhänge (nicht das Logo in der Signatur).</p>
+    </im-card>
+
+    @if (source is not null)
+    {
+        <im-buttons back-href="/Admin/Intake" delete-url="@Url.Page("/Admin/Intake/Edit", "Delete", new { id = Model.Id })" delete-confirm="Diesen Eingang löschen? Die Belege, die über ihn kamen, bleiben.">
+            <button type="submit" formnovalidate asp-page-handler="Test" class="mat-btn mat-btn--secondary">@Ui.Icon("activity")<span>Prüfen</span></button>
+            <button type="submit" formnovalidate asp-page-handler="Run" asp-route-id="@Model.Id" class="mat-btn mat-btn--secondary">@Ui.Icon("download")<span>Jetzt abholen</span></button>
+        </im-buttons>
+    }
+    else
+    {
+        <im-buttons back-href="/Admin/Intake">
+            <button type="submit" formnovalidate asp-page-handler="Test" class="mat-btn mat-btn--secondary">@Ui.Icon("activity")<span>Prüfen</span></button>
+        </im-buttons>
+    }
+</form>

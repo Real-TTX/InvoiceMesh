@@ -30,19 +30,19 @@ public sealed class DemoData(ImDbContext db, InvoiceService invoices)
         var paperDe = Encoding.UTF8.GetString(Resource("paper-de.txt"));
         var paperEn = Encoding.UTF8.GetString(Resource("paper-en.txt"));
 
-        await invoices.AddAsync(ubl, "RE-2026-0815.xml", InvoiceSource.Demo, ct);
-        await invoices.AddAsync(Hybrid(cii, "Torréfaction Lumière SARL", "Facture FA-2026-117"), "facture_FA-2026-117.pdf", InvoiceSource.Demo, ct);
-        await invoices.AddAsync(credit, "CN-9001.xml", InvoiceSource.Demo, ct);
-        await invoices.AddAsync(TextPdf(paperDe), "Rechnung_2026-10477.pdf", InvoiceSource.Demo, ct);
-        await invoices.AddAsync(Scan(paperEn), "scan_brightside.png", InvoiceSource.Demo, ct);
+        await invoices.AddAsync(ubl, "RE-2026-0815.xml", InvoiceSource.Demo, ct: ct);
+        await invoices.AddAsync(Hybrid(cii, "Torréfaction Lumière SARL", "Facture FA-2026-117"), "facture_FA-2026-117.pdf", InvoiceSource.Demo, ct: ct);
+        await invoices.AddAsync(credit, "CN-9001.xml", InvoiceSource.Demo, ct: ct);
+        await invoices.AddAsync(TextPdf(paperDe), "Rechnung_2026-10477.pdf", InvoiceSource.Demo, ct: ct);
+        await invoices.AddAsync(Scan(paperEn), "scan_brightside.png", InvoiceSource.Demo, ct: ct);
 
         // An XRechnung whose total is wrong: the validation must find it.
         var wrong = Encoding.UTF8.GetString(ubl).Replace("RE-2026-0815", "RE-2026-0816", StringComparison.Ordinal)
             .Replace("<cbc:TaxInclusiveAmount currencyID=\"EUR\">1243.50</cbc:TaxInclusiveAmount>", "<cbc:TaxInclusiveAmount currencyID=\"EUR\">1234.50</cbc:TaxInclusiveAmount>", StringComparison.Ordinal);
-        await invoices.AddAsync(Encoding.UTF8.GetBytes(wrong), "RE-2026-0816.xml", InvoiceSource.Demo, ct);
+        await invoices.AddAsync(Encoding.UTF8.GetBytes(wrong), "RE-2026-0816.xml", InvoiceSource.Demo, ct: ct);
 
         // Not an invoice at all: the processing must say so in words.
-        await invoices.AddAsync([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x08, 0x00], "Notizen.docx", InvoiceSource.Demo, ct);
+        await invoices.AddAsync([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x08, 0x00], "Notizen.docx", InvoiceSource.Demo, ct: ct);
         return true;
     }
 

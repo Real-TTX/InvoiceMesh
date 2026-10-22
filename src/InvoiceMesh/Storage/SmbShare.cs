@@ -208,6 +208,31 @@ public sealed class SmbShare(SmbOptions options)
         },
         ct);
 
+    /// <summary>Moves (renames) a file below the configured folder to another path below it; folders on the way are made.</summary>
+    public Task MoveAsync(string relativePath, string targetRelativePath, CancellationToken ct = default) => Task.Run(
+        () =>
+        {
+            using var session = Connect();
+            var target = SplitPath(targetRelativePath);
+            EnsureFolder(session, string.Join('\\', target.Take(target.Count - 1)));
+            var opened = session.Store.CreateFile(out var handle, out _, Remote(string.Join('\\', SplitPath(relativePath))), AccessMask.GENERIC_READ | AccessMask.DELETE | AccessMask.SYNCHRONIZE, FileAttributes.Normal, ShareAccess.None, CreateDisposition.FILE_OPEN, CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT, null);
+            if (opened is NTStatus.STATUS_OBJECT_NAME_NOT_FOUND or NTStatus.STATUS_OBJECT_PATH_NOT_FOUND)
+            {
+                throw new StorageException($"„{relativePath}“ liegt nicht auf der Freigabe.");
+            }
+
+            CheckStatus(opened, "die Datei öffnen");
+            try
+            {
+                CheckStatus(session.Store.SetFileInformation(handle, new FileRenameInformationType2 { FileName = Remote(string.Join('\\', target)), ReplaceIfExists = false }), "die Datei verschieben");
+            }
+            finally
+            {
+                session.CloseQuietly(handle);
+            }
+        },
+        ct);
+
     public Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default) => Task.Run(
         () =>
         {

@@ -1,0 +1,40 @@
+@page
+@model InvoiceMesh.Pages.Admin.ApiKeys.IndexModel
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+    <partial name="_Table" model="Model.Table" />
+    <partial name="_Pager" model="Model.Pager" />
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--primary" href="/Admin/ApiKeys/Edit">@Ui.Icon("plus")<span>Neuer Schlüssel</span></a>
+    </div>
+</div>
+
+<section class="mat-card" aria-labelledby="api-usage">
+    <div class="mat-card__head">@Ui.Icon("terminal")<h2 class="mat-card__title" id="api-usage">So wird die API benutzt</h2></div>
+    <div class="mat-card__body">
+        <p>Der Schlüssel steht im Header <code>Authorization: Bearer im_…</code> (oder <code>X-Api-Key: im_…</code>). Eingelieferte Belege werden verarbeitet wie ein Upload; ZIP-Dateien werden ausgepackt.</p>
+        <h3 class="im-subhead">Belege einliefern</h3>
+        <pre class="im-code" tabindex="0" aria-label="Beispiel: Belege einliefern">curl -H "Authorization: Bearer im_…" -F "file=@@rechnung.pdf" -F "file=@@xrechnung.xml" @Model.Base/invoices
+
+curl -H "Authorization: Bearer im_…" -H "X-File-Name: rechnung.pdf" --data-binary @@rechnung.pdf @Model.Base/invoices</pre>
+        <h3 class="im-subhead">Abrufen</h3>
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Aufrufe zum Abrufen</caption>
+                <thead><tr><th scope="col">Aufruf</th><th scope="col">Liefert</th></tr></thead>
+                <tbody>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices?since=2026-10-01T00:00:00Z&amp;status=processed</td><td data-label="Liefert">Die Belege, neueste zuerst (höchstens 500).</td></tr>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices/{id}</td><td data-label="Liefert">Stand, Format, Prüfergebnis, erzeugte Dateien.</td></tr>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices/{id}/normalized</td><td data-label="Liefert">Die Daten im Zielschema (JSON).</td></tr>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices/{id}/extracted</td><td data-label="Liefert">Die ausgelesenen Daten mit Geschäftsbegriffen und Rohdaten (JSON).</td></tr>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices/{id}/report</td><td data-label="Liefert">Der Validierungsbericht (JSON).</td></tr>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices/{id}/xrechnung</td><td data-label="Liefert">Die XRechnung der aktuellen Daten (XML).</td></tr>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices/{id}/original</td><td data-label="Liefert">Die Originaldatei, unverändert.</td></tr>
+                    <tr><td data-label="Aufruf" class="mat-mono">GET /invoices/{id}/files/{fileId}</td><td data-label="Liefert">Eine erzeugte Datei (PDF-Ansicht, XRechnung).</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="mat-hint">Antworten: 202 eingeliefert, 401 ohne gültigen Schlüssel, 403 ohne das Recht dazu, 404 unbekannt, 409 noch nicht so weit (zum Beispiel noch nicht geprüft), 422 nichts davon war ein Beleg.</p>
+    </div>
+</section>
