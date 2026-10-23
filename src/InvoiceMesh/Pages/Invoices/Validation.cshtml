@@ -18,7 +18,7 @@
 }
 else
 {
-    <div class="im-stats">
+    <div class="mat-grid im-stats">
         @Ui.Kpi("Ergebnis", Labels.Of(v.Status), $"geprüft {Fmt.Moment(v.CreateDate)}", v.Status == ValidationStatus.Invalid ? "x-circle" : v.Status == ValidationStatus.Warnings ? "alert" : "check-circle", bad: v.Status == ValidationStatus.Invalid)
         @Ui.Kpi("Fehler", v.Errors.ToString(), "verletzen eine Regel", "x-circle", href: $"/Invoices/Validation?id={Model.Id}&stufe=fehler", bad: v.Errors > 0)
         @Ui.Kpi("Warnungen", v.Warnings.ToString(), "sollten geprüft werden", "alert", href: $"/Invoices/Validation?id={Model.Id}&stufe=warnungen")

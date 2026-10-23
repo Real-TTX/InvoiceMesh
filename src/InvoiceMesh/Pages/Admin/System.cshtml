@@ -1,7 +1,7 @@
 @page
 @model InvoiceMesh.Pages.Admin.SystemModel
 
-<div class="im-stats">
+<div class="mat-grid im-stats">
     @Ui.Kpi("Version", Model.Version, "seit " + Fmt.Moment(Model.Started) + " in Betrieb", "server", "accent")
     @Ui.Kpi("Datenbank", Fmt.FileSize(Model.DatabaseBytes), Model.DatabaseVersion, "database", "busy")
     @Ui.Kpi("Arbeitsspeicher", Fmt.FileSize(Model.Memory), "der Anwendung", "activity", "info")

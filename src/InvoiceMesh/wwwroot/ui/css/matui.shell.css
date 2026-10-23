@@ -339,7 +339,12 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
 }
 
 /* ---- The content side ---- */
+/* position: relative makes the content the box an absolutely placed element inside it is placed in. Without it a visually hidden caption
+   (mat-sr-only) or a table head hidden on a phone, far down a long page, was placed against the document and made the document as tall as
+   the content: invisible since the document is locked (SHELL-07), but focusing such an element or searching the page still scrolled the
+   locked document and slid the whole app out of the window. */
 .mat-main {
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;

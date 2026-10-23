@@ -21,7 +21,7 @@ else if (!Model.Enabled)
     <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Die geplanten Sicherungen sind angehalten.</strong> Es läuft nichts von selbst, bis du sie wieder einschaltest.</div></div>
 }
 
-<div class="im-stats">
+<div class="mat-grid im-stats">
     @Ui.Kpi("Geplante Sicherung", Model.Enabled && Model.Plans.Any(p => p.IsEnabled) ? "an" : "aus", Ui.Plural(Model.Plans.Count(p => p.IsEnabled), "Plan aktiv", "Pläne aktiv"), "archive", Model.Enabled && Model.Plans.Any(p => p.IsEnabled) ? "ok" : "warn")
     @Ui.Kpi("Zuletzt", Model.LastRun is null ? "noch nie" : Fmt.Date(Model.LastRun.StartDate), Model.LastRun is null ? null : Model.LastRun.Status == BackupRunStatus.Success ? "erfolgreich" : "fehlgeschlagen", "clock", Model.LastRun?.Status == BackupRunStatus.Failed ? "error" : "busy", bad: Model.LastRun?.Status == BackupRunStatus.Failed)
     @Ui.Kpi("Als Nächstes", Model.Enabled && Model.NextRun is not null ? Fmt.Date(Model.NextRun) : "–", Model.Enabled && Model.NextRun is not null ? $"um {Fmt.Time(Model.NextRun)} Uhr" : null, "calendar", "info")

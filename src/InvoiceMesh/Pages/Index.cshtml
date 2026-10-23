@@ -14,7 +14,7 @@
     </div>
 }
 
-<div class="im-stats">
+<div class="mat-grid im-stats">
     @Ui.Kpi("Belege gesamt", Fmt.Integer(Model.Total), "alle Eingänge", "file-text", href: "/Invoices")
     @Ui.Kpi("Erfolgreich verarbeitet", Fmt.Integer(Model.Good), Model.Total == 0 ? "noch nichts da" : Fmt.Percent(Model.Good / (decimal)Model.Total) + " der Belege", "check-circle", href: "/Invoices?validierung=gueltig")
     @Ui.Kpi("Zu prüfen", Fmt.Integer(Model.Review), Model.Review == 0 ? "nichts offen" : "unsichere Werte oder Fehler", "eye", href: "/Invoices?status=pruefen", bad: Model.Review > 0)

@@ -35,7 +35,8 @@
 .im-chips { display: flex; flex-wrap: wrap; gap: var(--mat-space-1) var(--mat-space-2); }
 
 /* ---- The number cards at the top of a page ---- */
-.im-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--mat-space-3); }
+/* Key figures: the toolkit grid (two columns on a phone, MatUi 0.9.1) with as many columns as fit on a wide screen (five on the dashboard). */
+.im-stats { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--mat-space-3); }
 .im-stat .mat-stat__label { display: inline-flex; align-items: center; gap: var(--mat-space-2); }
 .im-stat .mat-stat__label .mat-icon { color: var(--mat-text-faint); }
 .im-stat .mat-stat__value { font-variant-numeric: tabular-nums; }

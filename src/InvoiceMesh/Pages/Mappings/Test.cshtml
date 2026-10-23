@@ -39,7 +39,7 @@ else
 
     @if (Model.Report is { } r && Model.SampleDoc is { } doc)
     {
-        <div class="im-stats">
+        <div class="mat-grid im-stats">
             @Ui.Kpi("Zugeordnet", r.Count(FieldStatus.Mapped).ToString(), "aus einer Quelle", "check-circle")
             @Ui.Kpi("Standardwerte", r.Count(FieldStatus.Default).ToString(), "keine Quelle hatte einen Wert", "info")
             @Ui.Kpi("Konflikte", r.Count(FieldStatus.Conflict).ToString(), "Quellen uneinig", "alert", bad: r.Count(FieldStatus.Conflict) > 0)
